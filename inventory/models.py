@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import F
 from products.models import Product
 from django.conf import settings
+from django.core.validators import MinValueValidator
 
 
 class OmborMovement(models.Model):
@@ -21,7 +22,7 @@ class OmborMovement(models.Model):
     )
     product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="movements")
     movement_type = models.CharField(max_length=3,choices=MovementType.choices)
-    nechta = models.PositiveIntegerField()
+    nechta = models.PositiveIntegerField(validators=[MinValueValidator(1)],verbose_name="Miqdor")
     sababi = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

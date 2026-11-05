@@ -81,6 +81,21 @@ def cancel_order(order_id, user=None):
         pk=order_id
     )
 
+    # Buyurtma egasini tekshirish
+    rahbar = (
+            user and user.groups.filter(name="Rahbar").exists()
+    )
+
+    if (
+            user
+            and not user.is_superuser
+            and not rahbar
+            and order.customer_id != user.id
+    ):
+        raise ValidationError(
+            "Siz bu buyurtmani boshqarish huquqiga ega emassiz!"
+        )
+
     if order.status == Order.Status.CANCELLED:
         raise ValidationError("Bu buyurtma avval bekor qilingan!")
 

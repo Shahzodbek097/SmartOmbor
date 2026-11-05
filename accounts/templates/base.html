@@ -1,258 +1,454 @@
 {% load static %}
 
 <html lang="uz">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>{% block title %}SmartOmbor{% endblock %}</title>
 
-    <!-- Bootstrap CSS -->
+    <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            color: #263449;
+            background: #e9eff7;
+            font-family: "Segoe UI", sans-serif;
+        }
+
+        /* ASOSIY TUZILMA */
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* CHAP MENU */
+        .sidebar {
+            width: 270px;
+            min-width: 270px;
+            min-height: 100vh;
+            background: linear-gradient(180deg, #172b46, #203c5c);
+            color: #fff;
+            padding: 22px 15px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 4px 0 18px rgba(20, 40, 65, 0.12);
+            z-index: 1000;
+        }
+
+        .sidebar-brand {
+            color: #fff;
+            font-size: 23px;
+            font-weight: 800;
+            text-decoration: none;
+            padding: 8px 12px 24px;
+            display: block;
+            letter-spacing: 0.4px;
+        }
+
+        .sidebar-section {
+            color: #91a9c5;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            padding: 12px 13px 8px;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            margin: 3px 0;
+            color: #d5e1ef;
+            text-decoration: none;
+            border-radius: 9px;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        .sidebar-link i {
+            font-size: 18px;
+            width: 22px;
+            text-align: center;
+        }
+
+        .sidebar-link:hover {
+            color: #fff;
+            background: rgba(255,255,255,0.10);
+        }
+
+        .sidebar-link.active {
+            color: #fff;
+            background: #356da5;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        /* SHAXSIY KABINET */
+        .profile-menu {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 12px;
+            padding: 7px;
+            margin-bottom: 20px;
+        }
+
+        .profile-menu .sidebar-link {
+            color: #fff;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .profile-menu .sidebar-link.active {
+            background: #477eae;
+        }
+
+        .sidebar-divider {
+            border-color: rgba(255,255,255,0.16);
+            margin: 10px 5px;
+        }
+
+        .sidebar-bottom {
+            margin-top: auto;
+            padding-top: 20px;
+        }
+
+        .user-name {
+            color: #c5d4e5;
+            font-size: 13px;
+            padding: 10px 12px;
+            overflow-wrap: anywhere;
+        }
+
+        .logout-button {
+            width: 100%;
+            border: 0;
+            background: rgba(220, 53, 69, 0.15);
+            color: #ffb9c0;
+            text-align: left;
+            padding: 12px 14px;
+            border-radius: 9px;
+            transition: 0.2s;
+        }
+
+        .logout-button:hover {
+            background: #dc3545;
+            color: #fff;
+        }
+
+        /* O'NG ISHCHI QISM */
+        .main-area {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .top-header {
+            min-height: 65px;
+            background: rgba(255,255,255,0.72);
+            border-bottom: 1px solid rgba(100,120,150,0.12);
+            display: flex;
+            align-items: center;
+            padding: 12px 25px;
+            gap: 12px;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 28px;
+            background: linear-gradient(135deg, #eaf0f8, #e2eaf4);
+        }
+
+        /* SAHIFAGA QARAB FON */
+        body[data-page="dashboard"] .content-area {
+            background: linear-gradient(135deg, #e7eef9, #dce8f5);
+        }
+
+        body[data-page="product_list"] .content-area,
+        body[data-page="category_list"] .content-area {
+            background: linear-gradient(135deg, #e8f2f0, #dcece8);
+        }
+
+        body[data-page="movement_list"] .content-area {
+            background: linear-gradient(135deg, #e9eff8, #dce5f2);
+        }
+
+        body[data-page="order_list"] .content-area,
+        body[data-page="manager_order_list"] .content-area {
+            background: linear-gradient(135deg, #f0eefa, #e7e3f5);
+        }
+
+        body[data-page="sellers_report"] .content-area,
+        body[data-page="inventory_report"] .content-area {
+            background: linear-gradient(135deg, #f4eee5, #eee5d8);
+        }
+
+        body[data-page="profile"] .content-area,
+        body[data-page="profile_update"] .content-area {
+            background: linear-gradient(135deg, #e5f0f5, #dceaf1);
+        }
+
+        /* KARTALAR VA JADVALLAR */
+        .content-area .card {
+            border: 1px solid rgba(100,120,150,0.12);
+            border-radius: 13px;
+            box-shadow: 0 5px 18px rgba(30,50,80,0.06);
+        }
+
+        .content-area .table {
+            --bs-table-bg: transparent;
+        }
+
+        .content-area .table thead th {
+            background: #e7edf5;
+            color: #34465e;
+        }
+
+        .app-footer {
+            padding: 15px;
+            text-align: center;
+            color: #74839a;
+            font-size: 12px;
+            background: #e5ebf3;
+        }
+
+        /* TELEFON UCHUN */
+        @media (min-width: 992px) {
+            .sidebar {
+                display: flex !important;
+            }
+        }
+
+        @media (max-width: 991.98px) {
+            .app-layout {
+                display: block;
+            }
+
+            .sidebar {
+                width: 100%;
+                min-width: 0;
+                min-height: auto;
+            }
+
+            .content-area {
+                padding: 18px 12px;
+            }
+
+            .top-header {
+                padding: 12px 15px;
+            }
+        }
+    </style>
 
     {% block extra_css %}{% endblock %}
 </head>
 
-<body class="bg-light">
+<body data-page="{{ request.resolver_match.url_name|default:'default' }}">
 
-<!-- NAVBAR -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow">
-    <div class="container-fluid">
+<div class="app-layout">
 
-        <!-- LOGO -->
-        <a class="navbar-brand fw-bold"
-           href="{% if user.is_authenticated %}
-                    {% if user.is_superuser or perms.sales.view_order and not perms.sales.add_order %}
-                        {% url 'reports:dashboard' %}
-                    {% elif perms.products.view_product %}
-                        {% url 'products:product_list' %}
-                    {% elif perms.inventory.view_ombormovement %}
-                        {% url 'inventory:movement_list' %}
-                    {% else %}
-                        #
-                    {% endif %}
-                 {% else %}#{% endif %}">
+    <!-- CHAP TOMON MENU -->
+    <aside class="sidebar collapse d-lg-flex" id="sidebarMenu">
+
+        <a class="sidebar-brand"
+           href="{% if user.is_authenticated %}{% url 'reports:dashboard' %}{% else %}{% url 'accounts:login' %}{% endif %}">
+            <i class="bi bi-box-seam"></i>
             SmartOmbor
         </a>
 
-        <!-- MOBILE MENU BUTTON -->
-        <button class="navbar-toggler"
-                type="button"
-                data-bs-toggle="collapse"
-                data-bs-target="#navbarMenu"
-                aria-controls="navbarMenu"
-                aria-expanded="false"
-                aria-label="Menyuni ochish">
+        {% if user.is_authenticated %}
 
-            <span class="navbar-toggler-icon"></span>
-        </button>
+            <!-- SHAXSIY KABINET BIRINCHI -->
+            <div class="profile-menu">
+                <a href="{% url 'accounts:profile' %}"
+                   class="sidebar-link {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_update' %}active{% endif %}">
+                    <i class="bi bi-person-circle"></i>
+                    Shaxsiy kabinet
+                </a>
+            </div>
 
-        <div class="collapse navbar-collapse" id="navbarMenu">
+            <div class="sidebar-section">ASOSIY MENU</div>
 
-            <!-- LEFT MENU -->
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <!-- RAHBAR VA SUPERUSER -->
+            {% if user.is_superuser or perms.sales.view_order and not perms.sales.add_order %}
 
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'accounts:profile' %}">
-                        <i class="bi bi-person-circle"></i>
-                        Shaxsiy kabinet
+                <a href="{% url 'reports:dashboard' %}"
+                   class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <i class="bi bi-grid-1x2"></i>
+                    Bosh menu
+                </a>
+
+                <a href="{% url 'reports:sellers_report' %}"
+                   class="sidebar-link {% if request.resolver_match.url_name == 'sellers_report' %}active{% endif %}">
+                    <i class="bi bi-people"></i>
+                    Sotuvchilar hisoboti
+                </a>
+
+                <a href="{% url 'reports:inventory_report' %}"
+                   class="sidebar-link {% if request.resolver_match.url_name == 'inventory_report' %}active{% endif %}">
+                    <i class="bi bi-clipboard-data"></i>
+                    Ombor hisoboti
+                </a>
+
+            {% endif %}
+
+            <!-- MAHSULOTLAR -->
+            {% if perms.products.view_product or user.is_superuser %}
+                <a href="{% url 'products:product_list' %}"
+                   class="sidebar-link {% if request.resolver_match.url_name == 'product_list' %}active{% endif %}">
+                    <i class="bi bi-box"></i>
+                    Mahsulotlar
+                </a>
+            {% endif %}
+
+            <!-- KATEGORIYALAR -->
+            {% if perms.products.view_category or user.is_superuser %}
+                <a href="{% url 'products:category_list' %}"
+                   class="sidebar-link {% if request.resolver_match.url_name == 'category_list' %}active{% endif %}">
+                    <i class="bi bi-tags"></i>
+                    Kategoriyalar
+                </a>
+            {% endif %}
+
+            <!-- OMBOR -->
+            {% if perms.inventory.view_ombormovement or user.is_superuser %}
+                <a href="{% url 'inventory:movement_list' %}"
+                   class="sidebar-link {% if request.resolver_match.url_name == 'movement_list' %}active{% endif %}">
+                    <i class="bi bi-arrow-left-right"></i>
+                    Ombor
+                </a>
+            {% endif %}
+
+            <!-- BUYURTMALAR -->
+            {% if user.is_superuser %}
+                <a href="{% url 'sales:manager_order_list' %}"
+                   class="sidebar-link {% if request.resolver_match.url_name == 'manager_order_list' %}active{% endif %}">
+                    <i class="bi bi-receipt"></i>
+                    Barcha buyurtmalar
+                </a>
+
+            {% elif perms.sales.view_order %}
+
+                {% if perms.sales.add_order %}
+                    <a href="{% url 'sales:order_list' %}"
+                       class="sidebar-link {% if request.resolver_match.url_name == 'order_list' %}active{% endif %}">
+                        <i class="bi bi-cart3"></i>
+                        Mening buyurtmalarim
                     </a>
-                </li>
-
-                {% if user.is_authenticated %}
-
-                    <!-- RAHBAR VA SUPERUSER -->
-                    {% if user.is_superuser or perms.sales.view_order and not perms.sales.add_order %}
-
-                        <li class="nav-item">
-                            <a class="nav-link"
-                               href="{% url 'reports:dashboard' %}">
-                                Bosh menu
-                            </a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link"
-                               href="{% url 'reports:sellers_report' %}">
-                                Sotuvchilar hisoboti
-                            </a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link"
-                               href="{% url 'reports:inventory_report' %}">
-                                Ombor hisoboti
-                            </a>
-                        </li>
-
-                    {% endif %}
-
-                    <!-- MAHSULOTLAR -->
-                    {% if perms.products.view_product or user.is_superuser %}
-                        <li class="nav-item">
-                            <a class="nav-link"
-                               href="{% url 'products:product_list' %}">
-                                Mahsulotlar
-                            </a>
-                        </li>
-                    {% endif %}
-
-                    <!-- KATEGORIYALAR -->
-                    {% if perms.products.view_category or user.is_superuser %}
-                        <li class="nav-item">
-                            <a class="nav-link"
-                               href="{% url 'products:category_list' %}">
-                                Kategoriyalar
-                            </a>
-                        </li>
-                    {% endif %}
-
-                    <!-- OMBOR -->
-                    {% if perms.inventory.view_ombormovement or user.is_superuser %}
-                        <li class="nav-item">
-                            <a class="nav-link"
-                               href="{% url 'inventory:movement_list' %}">
-                                Ombor
-                            </a>
-                        </li>
-                    {% endif %}
-
-                    <!-- BUYURTMALAR -->
-                    {% if user.is_superuser %}
-                        <li class="nav-item">
-                            <a class="nav-link"
-                               href="{% url 'sales:manager_order_list' %}">
-                                Barcha buyurtmalar
-                            </a>
-                        </li>
-
-                    {% elif perms.sales.view_order %}
-                        <li class="nav-item">
-
-                            {% if perms.sales.add_order %}
-                                <a class="nav-link"
-                                   href="{% url 'sales:order_list' %}">
-                                    Mening buyurtmalarim
-                                </a>
-                            {% else %}
-                                <a class="nav-link"
-                                   href="{% url 'sales:manager_order_list' %}">
-                                    Barcha buyurtmalar
-                                </a>
-                            {% endif %}
-
-                        </li>
-                    {% endif %}
-
-                {% endif %}
-
-            </ul>
-
-            <!-- RIGHT MENU -->
-            <ul class="navbar-nav ms-auto align-items-lg-center">
-
-                <li class="nav-item">
-                    <form method="POST" action="{% url 'accounts:logout' %}">
-                        {% csrf_token %}
-                        <button type="submit" class="nav-link btn btn-link">
-                            <i class="bi bi-box-arrow-right"></i>
-                            Chiqish
-                        </button>
-                    </form>
-                </li>
-
-                {% if user.is_authenticated %}
-
-                    <!-- USERNAME -->
-                    <li class="nav-item">
-                        <span class="nav-link text-white">
-                            <strong>
-                                {{ user.get_full_name|default:user.username }}
-                            </strong>
-                        </span>
-                    </li>
-
-                    <!-- LOGOUT -->
-                    <li class="nav-item ms-lg-2">
-                        <form method="post"
-                              action="/accounts/logout/">
-
-                            {% csrf_token %}
-
-                            <button type="submit"
-                                    class="btn btn-danger btn-sm">
-                                Tizimdan chiqish
-                            </button>
-
-                        </form>
-                    </li>
-
                 {% else %}
-
-                    <!-- LOGIN -->
-                    <li class="nav-item">
-                        <a href="{% url 'login' %}"
-                           class="nav-link">
-                            Kirish
-                        </a>
-                    </li>
-
+                    <a href="{% url 'sales:manager_order_list' %}"
+                       class="sidebar-link {% if request.resolver_match.url_name == 'manager_order_list' %}active{% endif %}">
+                        <i class="bi bi-receipt"></i>
+                        Barcha buyurtmalar
+                    </a>
                 {% endif %}
 
-            </ul>
+            {% endif %}
 
-        </div>
-    </div>
-</nav>
+            <div class="sidebar-bottom">
 
+                <hr class="sidebar-divider">
 
-<!-- MAIN CONTENT -->
-<main class="container-fluid py-4">
+                <div class="user-name">
+                    <i class="bi bi-person"></i>
+                    {{ user.get_full_name|default:user.username }}
+                </div>
 
-    <!-- MESSAGES -->
-    {% if messages %}
-        {% for message in messages %}
-
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show"
-                 role="alert">
-
-                {{ message }}
-
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="alert"
-                        aria-label="Yopish">
-                </button>
+                <form method="POST" action="{% url 'accounts:logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-button">
+                        <i class="bi bi-box-arrow-left me-2"></i>
+                        Tizimdan chiqish
+                    </button>
+                </form>
 
             </div>
 
-        {% endfor %}
-    {% endif %}
+        {% else %}
 
-    <!-- PAGE CONTENT -->
-    {% block content %}
-    {% endblock %}
+            <a href="{% url 'accounts:login' %}" class="sidebar-link">
+                <i class="bi bi-box-arrow-in-right"></i>
+                Tizimga kirish
+            </a>
 
-</main>
+        {% endif %}
 
+    </aside>
 
-<!-- FOOTER -->
-<footer class="text-center text-muted py-3 mt-4">
-    <small>
-        SmartOmbor &copy; 2026 | Barcha huquqlar himoyalangan
-    </small>
-</footer>
+    <!-- O'NG TOMON ISHCHI QISM -->
+    <div class="main-area">
 
+        <!-- YUQORI PANEL -->
+        <header class="top-header">
+
+            <button class="btn btn-outline-secondary d-lg-none"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#sidebarMenu"
+                    aria-controls="sidebarMenu"
+                    aria-expanded="false"
+                    aria-label="Menyuni ochish">
+                <i class="bi bi-list fs-4"></i>
+            </button>
+
+            <span class="fw-semibold text-secondary">
+                {% block page_heading %}SmartOmbor boshqaruv tizimi{% endblock %}
+            </span>
+
+        </header>
+
+        <!-- ASOSIY MAZMUN -->
+        <main class="content-area">
+
+            <!-- XABARLAR -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show"
+                         role="alert">
+
+                        {{ message }}
+
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="alert"
+                                aria-label="Yopish">
+                        </button>
+
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% block content %}
+            {% endblock %}
+
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="app-footer">
+            SmartOmbor &copy; 2026 | Barcha huquqlar himoyalangan
+        </footer>
+
+    </div>
+
+</div>
 
 <!-- BOOTSTRAP JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
-</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 {% block extra_js %}
 {% endblock %}
 
 </body>
 </html>
-```
