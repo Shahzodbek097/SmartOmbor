@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}Buyurtmalar | SmartOmbor{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Buyurtmalar</h2>
+
+    <a href="{% url 'sales:order_create' %}"
+       class="btn btn-primary">
+        + Yangi buyurtma
+    </a>
+</div>
+
+<!-- Qidiruv va filtrlash -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+
+        <form method="get" class="row g-3">
+
+            <div class="col-md-3">
+                <label class="form-label">Buyurtma raqami</label>
+                <input type="text"
+                       name="q"
+                       value="{{ qidiruv }}"
+                       class="form-control"
+                       placeholder="Masalan: 15">
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Buyurtma holati</label>
+
+                <select name="status" class="form-select">
+                    <option value="">Barcha holatlar</option>
+
+                    <option value="PENDING"
+                        {% if holat == "PENDING" %}selected{% endif %}>
+                        Kutilmoqda
+                    </option>
+
+                    <option value="COMPLETED"
+                        {% if holat == "COMPLETED" %}selected{% endif %}>
+                        Yakunlangan
+                    </option>
+
+                    <option value="CANCELLED"
+                        {% if holat == "CANCELLED" %}selected{% endif %}>
+                        Bekor qilingan
+                    </option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Boshlanish sanasi</label>
+                <input type="date"
+                       name="date_from"
+                       value="{{ sana_boshi }}"
+                       class="form-control">
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Tugash sanasi</label>
+                <input type="date"
+                       name="date_to"
+                       value="{{ sana_oxiri }}"
+                       class="form-control">
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-success">
+                    Qidirish
+                </button>
+
+                <a href="{% url 'sales:order_list' %}"
+                   class="btn btn-secondary">
+                    Tozalash
+                </a>
+            </div>
+
+        </form>
+
+    </div>
+</div>
+
+<!-- Buyurtmalar jadvali -->
+<div class="card shadow-sm">
+    <div class="card-body">
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Buyurtma raqami</th>
+                        <th>Holati</th>
+                        <th>Umumiy summa</th>
+                        <th>Sana</th>
+                        <th>Amallar</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>#{{ order.id }}</td>
+
+                        <td>
+                            {% if order.status == "PENDING" %}
+                                <span class="badge bg-warning text-dark">
+                                    Kutilmoqda
+                                </span>
+                            {% elif order.status == "COMPLETED" %}
+                                <span class="badge bg-success">
+                                    Yakunlangan
+                                </span>
+                            {% else %}
+                                <span class="badge bg-danger">
+                                    Bekor qilingan
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <td>{{ order.total_price }}</td>
+
+                        <td>
+                            {{ order.created_at|date:"d.m.Y H:i" }}
+                        </td>
+
+                        <td>
+                            <a href="{% url 'sales:order_detail' order.id %}"
+                               class="btn btn-sm btn-info">
+                                Batafsil
+                            </a>
+                        </td>
+                    </tr>
+
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">
+                            Buyurtmalar topilmadi.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+
+            </table>
+        </div>
+
+        <!-- Sahifalash -->
+        {% if page_obj.has_other_pages %}
+        <nav>
+            <ul class="pagination justify-content-center">
+
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link"
+                       href="?page={{ page_obj.previous_page_number }}&q={{ qidiruv|urlencode }}&status={{ holat }}&date_from={{ sana_boshi }}&date_to={{ sana_oxiri }}">
+                        Oldingi
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for raqam in page_obj.paginator.page_range %}
+                <li class="page-item {% if page_obj.number == raqam %}active{% endif %}">
+                    <a class="page-link"
+                       href="?page={{ raqam }}&q={{ qidiruv|urlencode }}&status={{ holat }}&date_from={{ sana_boshi }}&date_to={{ sana_oxiri }}">
+                        {{ raqam }}
+                    </a>
+                </li>
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link"
+                       href="?page={{ page_obj.next_page_number }}&q={{ qidiruv|urlencode }}&status={{ holat }}&date_from={{ sana_boshi }}&date_to={{ sana_oxiri }}">
+                        Keyingi
+                    </a>
+                </li>
+                {% endif %}
+
+            </ul>
+        </nav>
+        {% endif %}
+
+        <p class="text-muted text-center mb-0">
+            Jami buyurtmalar: {{ page_obj.paginator.count }}
+        </p>
+
+    </div>
+</div>
+
+{% endblock %}

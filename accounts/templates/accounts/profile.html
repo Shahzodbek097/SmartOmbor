@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Shaxsiy kabinet</h4>
+        </div>
+
+        <div class="card-body">
+            <div class="mb-3">
+                <strong>Login:</strong>
+                {{ profile_user.username }}
+            </div>
+
+            <div class="mb-3">
+                <strong>Ism:</strong>
+                {{ profile_user.first_name|default:"Kiritilmagan" }}
+            </div>
+
+            <div class="mb-3">
+                <strong>Familiya:</strong>
+                {{ profile_user.last_name|default:"Kiritilmagan" }}
+            </div>
+
+            <div class="mb-3">
+                <strong>Email:</strong>
+                {{ profile_user.email|default:"Kiritilmagan" }}
+            </div>
+
+            <div class="mb-3">
+                <strong>Foydalanuvchi roli:</strong>
+                {% if role %}
+                    {{ role.name }}
+                {% elif profile_user.is_superuser %}
+                    Superuser
+                {% else %}
+                    Rol biriktirilmagan
+                {% endif %}
+            </div>
+
+            <div class="mb-3">
+                <strong>Oxirgi kirish:</strong>
+                {% if profile_user.last_login %}
+                    {{ profile_user.last_login|date:"d.m.Y H:i" }}
+                {% else %}
+                    Hozircha kirmagan
+                {% endif %}
+            </div>
+
+            <a href="{% url 'accounts:password_change' %}"
+               class="btn btn-warning">
+                <i class="bi bi-key"></i>
+                Parolni o'zgartirish
+            </a>
+
+            <a href="{% url 'accounts:profile_update' %}"
+               class="btn btn-primary">
+                <i class="bi bi-pencil-square"></i>
+                Ma'lumotlarni tahrirlash
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Yangi ombor harakati | SmartOmbor {% endblock %}
+{% block content %}
+
+<div class="card shadow-sm mx-auto" style="max-width: 600px;">
+
+    <div class="card-header">
+        <h4>Yangi ombor harakati</h4>
+    </div>
+
+    <div class="card-body">
+
+        <form method="post">
+
+            {% csrf_token %}
+
+            {{ form.non_field_errors }}
+
+            {% for field in form %}
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+                        {{ field.label }}
+                    </label>
+
+                    {{ field }}
+
+                    {% if field.errors %}
+                        <div class="text-danger">
+                            {{ field.errors }}
+                        </div>
+                    {% endif %}
+
+                </div>
+
+            {% endfor %}
+
+            <button type="submit" class="btn btn-success">
+                Saqlash
+            </button>
+
+            <a href="{% url 'inventory:movement_list' %}" class="btn btn-secondary">
+                Orqaga
+            </a>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}

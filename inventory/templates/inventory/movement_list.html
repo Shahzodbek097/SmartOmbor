@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Ombor harakatlari | SmartOmbor{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Ombor kirim-chiqimlari</h2>
+
+    <a href="{% url 'inventory:movement_create' %}"
+       class="btn btn-primary">
+        + Yangi harakat
+    </a>
+</div>
+
+<!-- Filtrlash -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+
+        <form method="get" class="row g-3">
+
+            <div class="col-md-3">
+                <label class="form-label">Mahsulot nomi</label>
+                <input type="text"
+                       name="q"
+                       value="{{ qidiruv }}"
+                       class="form-control"
+                       placeholder="Qidirish...">
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Harakat turi</label>
+                <select name="movement_type" class="form-select">
+                    <option value="">Barchasi</option>
+                    <option value="IN"
+                            {% if harakat_turi == "IN" %}selected{% endif %}>
+                        Kirim
+                    </option>
+                    <option value="OUT"
+                            {% if harakat_turi == "OUT" %}selected{% endif %}>
+                        Chiqim
+                    </option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Boshlanish sanasi</label>
+                <input type="date"
+                       name="date_from"
+                       value="{{ sana_boshi }}"
+                       class="form-control">
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Tugash sanasi</label>
+                <input type="date"
+                       name="date_to"
+                       value="{{ sana_oxiri }}"
+                       class="form-control">
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Mas'ul xodim</label>
+                <select name="user" class="form-select">
+                    <option value="">Barcha xodimlar</option>
+
+                    {% for user in users %}
+                        <option value="{{ user.id }}"
+                            {% if user_id == user.id|stringformat:"s" %}selected{% endif %}>
+                            {{ user.get_full_name|default:user.username }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-3 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-success">
+                    Filtrlash
+                </button>
+
+                <a href="{% url 'inventory:movement_list' %}"
+                   class="btn btn-secondary">
+                    Tozalash
+                </a>
+            </div>
+
+        </form>
+
+    </div>
+</div>
+
+<!-- Jadval -->
+<div class="card shadow-sm">
+    <div class="card-body">
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Mas'ul xodim</th>
+                        <th>Mahsulot</th>
+                        <th>Harakat turi</th>
+                        <th>Miqdori</th>
+                        <th>Sababi</th>
+                        <th>Sana</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for movement in movements %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>
+                            {% if movement.user %}
+                                {{ movement.user.get_full_name|default:movement.user.username }}
+                            {% else %}
+                                <span class="text-muted">Noma'lum</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ movement.product.nomi }}</td>
+
+                        <td>
+                            {% if movement.movement_type == "IN" %}
+                                <span class="badge bg-success">Kirim</span>
+                            {% else %}
+                                <span class="badge bg-danger">Chiqim</span>
+                            {% endif %}
+                        </td>
+
+                        <td>{{ movement.nechta }}</td>
+                        <td>{{ movement.sababi|default:"-" }}</td>
+                        <td>{{ movement.created_at|date:"d.m.Y H:i" }}</td>
+                    </tr>
+
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">
+                            Ombor harakatlari topilmadi.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <nav>
+            <ul class="pagination justify-content-center">
+
+            {% if movements.has_previous %}
+                <a href="?page={{ movements.previous_page_number }}&search={{ request.GET.search|default:'' }}&movement_type={{ request.GET.movement_type|default:'' }}&date_from={{ request.GET.date_from|default:'' }}&date_to={{ request.GET.date_to|default:'' }}&user={{ request.GET.user|default:'' }}"
+                   class="btn btn-outline-primary">
+                    Oldingi
+                </a>
+            {% endif %}
+
+            <span class="mx-2">
+                {{ movements.number }} / {{ movements.paginator.num_pages }}
+            </span>
+
+            {% if movements.has_next %}
+                <a href="?page={{ movements.next_page_number }}&search={{ request.GET.search|default:'' }}&movement_type={{ request.GET.movement_type|default:'' }}&date_from={{ request.GET.date_from|default:'' }}&date_to={{ request.GET.date_to|default:'' }}&user={{ request.GET.user|default:'' }}"
+                   class="btn btn-outline-primary">
+                    Keyingi
+                </a>
+            {% endif %}
+
+            </ul>
+        </nav>
+        {% endif %}
+
+        <p class="text-muted text-center mb-0">
+            Jami harakatlar: {{ page_obj.paginator.count }}
+        </p>
+
+    </div>
+</div>
+
+{% endblock %}

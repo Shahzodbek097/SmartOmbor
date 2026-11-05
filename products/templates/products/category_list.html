@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Kategoriyalar | SmartOmbor {% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Kategoriyalar</h2>
+
+    <a href="{% url 'products:category_create' %}"
+       class="btn btn-primary">
+        + Kategoriya qo‘shish
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Kategoriya nomi</th>
+                        <th>Izoh</th>
+                        <th>Amallar</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for kategoriya in kategoriyalar %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ kategoriya.nomi }}</td>
+                        <td>{{ kategoriya.description|default:"-" }}</td>
+                        <td>
+                            <a href="{% url 'products:category_update' kategoriya.id %}"
+                               class="btn btn-sm btn-warning">
+                                Tahrirlash
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">
+                            Kategoriyalar mavjud emas.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

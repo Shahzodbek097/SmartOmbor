@@ -1,0 +1,45 @@
+from django.core.exceptions import PermissionDenied
+from functools import wraps
+from django.shortcuts import redirect
+
+def role_required(*roles):
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+
+            user = request.user
+
+            if not user.is_authenticated:
+                return redirect("accounts:login")
+
+            if user.is_superuser:
+                return view_func(request, *args, **kwargs)
+
+            if user.groups.filter(name__in=roles).exists():
+                return view_func(request, *args, **kwargs)
+
+            raise PermissionDenied
+
+        return wrapper
+    return decorator
+
+
+
+def permission_required(permission):
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+
+            if not request.user.is_authenticated:
+                raise PermissionDenied
+
+            if request.user.is_superuser:
+                return view_func(request, *args, **kwargs)
+
+            if request.user.has_perm(permission):
+                return view_func(request, *args, **kwargs)
+
+            raise PermissionDenied
+
+        return wrapper
+    return decorator

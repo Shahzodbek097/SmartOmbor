@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Sotuvchilar hisoboti | SmartOmbor{% endblock %}
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>Sotuvchilar hisoboti</h2>
+            <p class="text-muted">
+                Har bir sotuvchining savdo natijalari
+            </p>
+        </div>
+
+        <a href="{% url 'reports:dashboard' %}"
+           class="btn btn-secondary">
+            Bosh menu
+        </a>
+    </div>
+    <!-- Sana filtri -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+
+                <div class="col-md-4">
+                    <label class="form-label">Boshlanish sanasi</label>
+                    <input type="date"
+                           name="date_from"
+                           value="{{ sana_boshi }}"
+                           class="form-control">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Tugash sanasi</label>
+                    <input type="date"
+                           name="date_to"
+                           value="{{ sana_oxiri }}"
+                           class="form-control">
+                </div>
+
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        Filtrlash
+                    </button>
+                </div>
+
+                <div class="col-md-2 d-flex align-items-end">
+                    <a href="{% url 'reports:sellers_report' %}"
+                       class="btn btn-secondary w-100">
+                        Tozalash
+                    </a>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <a href="{% url 'reports:export_sellers_excel' %}?date_from={{ sana_boshi }}&date_to={{ sana_oxiri }}"
+        class="btn btn-success mt-3">
+        Excel yuklab olish
+    </a>
+
+    <a href="{% url 'reports:export_sellers_pdf' %}?date_from={{ sana_boshi|default:'' }}&date_to={{ sana_oxiri|default:'' }}"
+        class="btn btn-danger mt-3">
+        PDF yuklab olish
+    </a>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <div class="table-responsive">
+                <table class="table table-hover table-striped align-middle">
+
+                    <thead class="table-dark">
+                        <tr>
+                            <th>№</th>
+                            <th>Sotuvchi</th>
+                            <th>Jami buyurtmalar</th>
+                            <th>Yakunlangan</th>
+                            <th>Bekor qilingan</th>
+                            <th>Sotilgan mahsulotlar</th>
+                            <th>Savdo summasi</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for seller in sotuvchilar %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+
+                            <td>
+                                <strong>
+                                    {{ seller.customer__username }}
+                                </strong>
+                            </td>
+
+                            <td>{{ seller.jami_buyurtmalar }}</td>
+
+                            <td>
+                                <span class="badge bg-success">
+                                    {{ seller.yakunlangan_buyurtmalar }}
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="badge bg-danger">
+                                    {{ seller.bekor_qilingan_buyurtmalar }}
+                                </span>
+                            </td>
+
+                            <td>
+                                {{ seller.sotilgan_mahsulotlar }} dona
+                            </td>
+
+                            <td>
+                                <strong>
+                                    {{ seller.savdo_summasi|floatformat:2 }} so‘m
+                                </strong>
+                            </td>
+                        </tr>
+
+                        {% empty %}
+                        <tr>
+                            <td colspan="7"
+                                class="text-center text-muted py-4">
+                                Hozircha sotuvchilar hisoboti mavjud emas.
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

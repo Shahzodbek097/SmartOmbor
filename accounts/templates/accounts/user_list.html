@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3>Foydalanuvchilar</h3>
+            <p class="text-muted">Tizim foydalanuvchilarini boshqarish</p>
+        </div>
+
+        <a href="{% url 'accounts:user_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i>
+            Yangi foydalanuvchi
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <form method="GET" class="row g-2 mb-4">
+                <div class="col-md-9">
+                    <input
+                        type="text"
+                        name="q"
+                        class="form-control"
+                        placeholder="Login, ism, familiya yoki email bo'yicha qidirish..."
+                        value="{{ qidiruv }}"
+                    >
+                </div>
+
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Qidirish
+                    </button>
+
+                    <a href="{% url 'accounts:user_list' %}"
+                       class="btn btn-secondary">
+                        Tozalash
+                    </a>
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Login</th>
+                            <th>Ism-familiya</th>
+                            <th>Elektron pochta</th>
+                            <th>Rol</th>
+                            <th>Holati</th>
+                            <th>Amallar</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+
+                            <td>{{ user.username }}</td>
+
+                            <td>
+                                {{ user.first_name }} {{ user.last_name }}
+                            </td>
+
+                            <td>{{ user.email|default:"—" }}</td>
+
+                            <td>
+                                {% if user.is_superuser %}
+                                    <span class="badge bg-danger">Superuser</span>
+                                {% elif user.groups.first %}
+                                    <span class="badge bg-info">
+                                        {{ user.groups.first.name }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Rolsiz</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if user.is_active %}
+                                    <span class="badge bg-success">Faol</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Bloklangan</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                <div class="d-flex gap-2">
+
+                                    <a href="{% url 'accounts:user_update' user.id %}"
+                                       class="btn btn-sm btn-warning">
+                                        Tahrirlash
+                                    </a>
+
+                                    {% if user != request.user %}
+                                    <form method="POST"
+                                          action="{% url 'accounts:user_toggle_status' user.id %}">
+                                        {% csrf_token %}
+
+                                        <button type="submit"
+                                                class="btn btn-sm {% if user.is_active %}btn-danger{% else %}btn-success{% endif %}">
+                                            {% if user.is_active %}
+                                                Bloklash
+                                            {% else %}
+                                                Faollashtirish
+                                            {% endif %}
+                                        </button>
+                                    </form>
+                                    {% endif %}
+
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                Hozircha foydalanuvchilar mavjud emas.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+
+                </table>
+            </div>
+
+            {% if page_obj.has_other_pages %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link"
+                           href="?page={{ page_obj.previous_page_number }}&q={{ qidiruv }}">
+                            Oldingi
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                    <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                        <a class="page-link"
+                           href="?page={{ num }}&q={{ qidiruv }}">
+                            {{ num }}
+                        </a>
+                    </li>
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link"
+                           href="?page={{ page_obj.next_page_number }}&q={{ qidiruv }}">
+                            Keyingi
+                        </a>
+                    </li>
+                    {% endif %}
+
+                </ul>
+            </nav>
+            {% endif %}
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

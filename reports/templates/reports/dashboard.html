@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+{% block title %}Bosh menu | SmartOmbor{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="fw-bold mb-1">Bosh menu</h2>
+        <p class="text-muted mb-0">Savdo va ombor faoliyati statistikasi</p>
+    </div>
+</div>
+
+
+<!-- HISOBOT DAVRINI TANLASH -->
+{% if is_rahbar or is_sotuvchi %}
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <h5 class="mb-3">Hisobot davrini tanlash</h5>
+
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Boshlanish sanasi</label>
+                <input type="date"
+                       name="date_from"
+                       value="{{ sana_boshi|default:'' }}"
+                       class="form-control">
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Tugash sanasi</label>
+                <input type="date"
+                       name="date_to"
+                       value="{{ sana_oxiri|default:'' }}"
+                       class="form-control">
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-filter"></i> Filtrlash
+                </button>
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end">
+                <a href="{% url 'reports:dashboard' %}"
+                   class="btn btn-secondary w-100">
+                    Tozalash
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+
+<!-- SAVDO STATISTIKASI -->
+{% if is_rahbar or is_sotuvchi %}
+
+<h4 class="mb-3">Tanlangan davr natijalari</h4>
+
+<div class="row g-3 mb-4">
+
+    <!-- BUYURTMALAR -->
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <p class="text-muted mb-2">Yakunlangan buyurtmalar</p>
+                <h3 class="fw-bold mb-0">
+                    {{ davr.buyurtmalar_soni|default:0 }}
+                </h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- SAVDO SUMMASI -->
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <p class="text-muted mb-2">Savdo summasi</p>
+                <h3 class="fw-bold text-success mb-0">
+                    {{ davr.savdo_summasi|default:0|floatformat:2 }}
+                </h3>
+                <small class="text-muted">so‘m</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- SOTILGAN MAHSULOTLAR -->
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <p class="text-muted mb-2">Sotilgan mahsulotlar</p>
+                <h3 class="fw-bold mb-0">
+                    {{ davr.sotilgan_mahsulotlar|default:0 }}
+                </h3>
+                <small class="text-muted">dona</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAXMINIY FOYDA FAQAT RAHBAR UCHUN -->
+    {% if is_rahbar %}
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <p class="text-muted mb-2">Taxminiy foyda</p>
+                <h3 class="fw-bold text-primary mb-0">
+                    {{ davr.foyda|default:0|floatformat:2 }}
+                </h3>
+                <small class="text-muted">so‘m</small>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+
+<!-- EXCEL VA PDF FAQAT RAHBAR UCHUN -->
+{% if is_rahbar %}
+<div class="d-flex flex-wrap gap-2 mb-4">
+
+    <a href="{% url 'reports:export_dashboard_excel' %}?date_from={{ sana_boshi|default:'' }}&date_to={{ sana_oxiri|default:'' }}"
+       class="btn btn-success">
+        <i class="bi bi-file-earmark-excel"></i>
+        Excel yuklab olish
+    </a>
+
+    <a href="{% url 'reports:export_dashboard_pdf' %}?date_from={{ sana_boshi|default:'' }}&date_to={{ sana_oxiri|default:'' }}"
+       class="btn btn-danger">
+        <i class="bi bi-file-earmark-pdf"></i>
+        PDF yuklab olish
+    </a>
+
+</div>
+{% endif %}
+
+
+<!-- SAVDO GRAFIGI -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Tanlangan davr bo‘yicha kunlik savdo grafigi</h5>
+    </div>
+
+    <div class="card-body">
+        {{ davr_grafigi|json_script:"savdo-malumotlari" }}
+        <canvas id="salesChart" height="100"></canvas>
+    </div>
+</div>
+
+
+<!-- TOP 5 MAHSULOT -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Tanlangan davrda eng ko‘p sotilgan TOP 5 mahsulot</h5>
+    </div>
+
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle">
+
+                <thead class="table-dark">
+                    <tr>
+                        <th>№</th>
+                        <th>Mahsulot</th>
+                        <th>Sotilgan miqdor</th>
+                        <th>Savdo summasi</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for item in davr_top_mahsulotlar %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ item.product__nomi }}</td>
+                        <td>{{ item.jami_soni }} dona</td>
+                        <td>{{ item.jami_savdo|floatformat:2 }} so‘m</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">
+                            Tanlangan davrda savdo ma’lumotlari mavjud emas.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+
+
+<!-- KAM QOLGAN MAHSULOTLAR -->
+{% if is_rahbar or is_omborchi %}
+
+<div class="card shadow-sm border-0 mb-4">
+
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Kam qolgan mahsulotlar — joriy ombor holati</h5>
+    </div>
+
+    <div class="card-body">
+        <div class="table-responsive">
+
+            <table class="table table-striped table-hover align-middle">
+
+                <thead>
+                    <tr>
+                        <th>№</th>
+                        <th>Mahsulot</th>
+                        <th>Qoldiq</th>
+                        <th>Minimal qoldiq</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for mahsulot in kam_qolgan %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ mahsulot.nomi }}</td>
+                        <td>
+                            <span class="badge bg-danger">
+                                {{ mahsulot.qoldiq }}
+                            </span>
+                        </td>
+                        <td>{{ mahsulot.min_qoldiq }}</td>
+                    </tr>
+
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">
+                            Kam qolgan mahsulotlar mavjud emas.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+
+            </table>
+
+        </div>
+    </div>
+
+</div>
+
+{% endif %}
+
+
+<!-- CHART.JS -->
+{% if is_rahbar or is_sotuvchi %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    const chartData = JSON.parse(
+        document.getElementById("savdo-malumotlari").textContent
+    );
+
+    const ctx = document.getElementById("salesChart");
+
+    new Chart(ctx, {
+        type: "line",
+
+        data: {
+            labels: chartData.labels,
+
+            datasets: [{
+                label: "Kunlik savdo (so‘m)",
+                data: chartData.values,
+                borderWidth: 2,
+                tension: 0.3,
+                fill: false
+            }]
+        },
+
+        options: {
+            responsive: true,
+
+            plugins: {
+                legend: {
+                    display: true
+                }
+            },
+
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+{% endif %}
+
+{% endblock %}
+

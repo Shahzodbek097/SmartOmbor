@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+{% block title %}Ombor harakatlari | SmartOmbor{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold">Ombor harakatlari hisoboti</h2>
+        <p class="text-muted">Mahsulotlar kirimi va chiqimi statistikasi</p>
+    </div>
+</div>
+
+<!-- Sana filtri -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+
+            <div class="col-md-4">
+                <label class="form-label">Boshlanish sanasi</label>
+                <input type="date"
+                       name="date_from"
+                       value="{{ sana_boshi }}"
+                       class="form-control">
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Tugash sanasi</label>
+                <input type="date"
+                       name="date_to"
+                       value="{{ sana_oxiri }}"
+                       class="form-control">
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-primary w-100">
+                    Filtrlash
+                </button>
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end">
+                <a href="{% url 'reports:inventory_report' %}"
+                   class="btn btn-secondary w-100">
+                    Tozalash
+                </a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<!-- Statistikalar -->
+<div class="row g-3 mb-4">
+
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <p class="text-muted">Jami kirim</p>
+                <h3 class="text-success fw-bold">
+                    {{ report.jami_kirim }}
+                </h3>
+                <small>dona</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <p class="text-muted">Jami chiqim</p>
+                <h3 class="text-danger fw-bold">
+                    {{ report.jami_chiqim }}
+                </h3>
+                <small>dona</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <p class="text-muted">Kirim harakatlari</p>
+                <h3 class="fw-bold">
+                    {{ report.kirim_harakatlari }}
+                </h3>
+                <small>ta harakat</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <p class="text-muted">Chiqim harakatlari</p>
+                <h3 class="fw-bold">
+                    {{ report.chiqim_harakatlari }}
+                </h3>
+                <small>ta harakat</small>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Mahsulotlar bo'yicha kirim-chiqim -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Mahsulotlar bo‘yicha kirim-chiqim tahlili</h5>
+    </div>
+
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Mahsulot nomi</th>
+                        <th>Kirim</th>
+                        <th>Chiqim</th>
+                        <th>Joriy qoldiq</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for mahsulot in report.mahsulotlar %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ mahsulot.nomi }}</td>
+                        <td class="text-success">
+                            {{ mahsulot.jami_kirim|default:0 }} dona
+                        </td>
+                        <td class="text-danger">
+                            {{ mahsulot.jami_chiqim|default:0 }} dona
+                        </td>
+                        <td>
+                            <strong>{{ mahsulot.qoldiq }} dona</strong>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">
+                            Mahsulotlar mavjud emas.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<a href="{% url 'reports:export_inventory_excel' %}?date_from={{ sana_boshi }}&date_to={{ sana_oxiri }}"
+   class="btn btn-success">
+    <i class="bi bi-file-earmark-excel"></i>
+    Excel yuklab olish
+</a>
+
+<a href="{% url 'reports:export_inventory_pdf' %}?date_from={{ sana_boshi }}&date_to={{ sana_oxiri }}"
+   class="btn btn-danger mb-3">
+    PDF yuklab olish
+</a>
+
+<!-- Harakatlar jadvali -->
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Kirim va chiqimlar tarixi</h5>
+    </div>
+
+    <div class="card-body">
+        <div class="table-responsive">
+
+            <table class="table table-striped table-hover align-middle">
+
+                <thead class="table-dark">
+                    <tr>
+                        <th>№</th>
+                        <th>Mahsulot</th>
+                        <th>Harakat turi</th>
+                        <th>Miqdori</th>
+                        <th>Sababi</th>
+                        <th>Sana</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for item in report.harakatlar %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+
+                        <td>{{ item.product.nomi }}</td>
+
+                        <td>
+                            {% if item.movement_type == "IN" %}
+                                <span class="badge bg-success">Kirim</span>
+                            {% else %}
+                                <span class="badge bg-danger">Chiqim</span>
+                            {% endif %}
+                        </td>
+
+                        <td>{{ item.nechta }} dona</td>
+
+                        <td>{{ item.sababi|default:"—" }}</td>
+
+                        <td>{{ item.created_at|date:"d.m.Y H:i" }}</td>
+                    </tr>
+
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">
+                            Tanlangan davrda ombor harakatlari mavjud emas.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+
+            </table>
+
+        </div>
+    </div>
+</div>
+
+<!-- Kirim va chiqim grafigi -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Ombor kirim-chiqim grafigi</h5>
+    </div>
+
+    <div class="card-body">
+        <div style="max-width: 600px; margin: auto;">
+            <canvas id="inventoryChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Mahsulotlar bo'yicha kirim-chiqim grafigi -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Mahsulotlar kesimida kirim-chiqim</h5>
+    </div>
+
+    <div class="card-body">
+        <canvas id="productInventoryChart"></canvas>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    const inventoryData = {
+        labels: {{ inventory_chart.labels|safe }},
+        datasets: [{
+            label: "Mahsulot miqdori",
+            data: {{ inventory_chart.values|safe }},
+            backgroundColor: [
+                "rgba(25, 135, 84, 0.7)",
+                "rgba(220, 53, 69, 0.7)"
+            ],
+            borderColor: [
+                "rgb(25, 135, 84)",
+                "rgb(220, 53, 69)"
+            ],
+            borderWidth: 1
+        }]
+    };
+
+    new Chart(document.getElementById("inventoryChart"), {
+        type: "bar",
+        data: inventoryData,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+
+<script>
+    const productInventoryData = {
+        labels: {{ product_inventory_chart.labels|safe }},
+        datasets: [
+            {
+                label: "Kirim",
+                data: {{ product_inventory_chart.kirim|safe }},
+                backgroundColor: "rgba(25, 135, 84, 0.7)",
+            },
+            {
+                label: "Chiqim",
+                data: {{ product_inventory_chart.chiqim|safe }},
+                backgroundColor: "rgba(220, 53, 69, 0.7)",
+            }
+        ]
+    };
+
+    new Chart(document.getElementById("productInventoryChart"), {
+        type: "bar",
+        data: productInventoryData,
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+
+{% endblock %}

@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Mahsulotlar | SmartOmbor{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Mahsulotlar</h2>
+
+    <a href="{% url 'products:product_create' %}" class="btn btn-primary">
+        + Mahsulot qo‘shish
+    </a>
+</div>
+
+<!-- Qidiruv va filter -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+
+            <div class="col-md-5">
+                <label class="form-label">Mahsulot qidirish</label>
+                <input type="text"
+                       name="q"
+                       value="{{ qidiruv }}"
+                       class="form-control"
+                       placeholder="Mahsulot nomini kiriting...">
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Kategoriya</label>
+                <select name="category" class="form-select">
+                    <option value="">Barcha kategoriyalar</option>
+
+                    {% for kategoriya in kategoriyalar %}
+                    <option value="{{ kategoriya.id }}"
+                        {% if kategoriya_id == kategoriya.id|stringformat:"s" %}
+                            selected
+                        {% endif %}>
+                        {{ kategoriya.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-3 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-success">
+                    Qidirish
+                </button>
+
+                <a href="{% url 'products:product_list' %}"
+                   class="btn btn-secondary">
+                    Tozalash
+                </a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<!-- Mahsulotlar jadvali -->
+<div class="card shadow-sm">
+    <div class="card-body">
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Nomi</th>
+                        <th>Kategoriya</th>
+                        <th>Xarid narxi</th>
+                        <th>Sotish narxi</th>
+                        <th>Qoldiq</th>
+                        <th>Amallar</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for mahsulot in mahsulotlar %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ mahsulot.nomi }}</td>
+                        <td>{{ mahsulot.category.name }}</td>
+                        <td>{{ mahsulot.xarid_narxi }}</td>
+                        <td>{{ mahsulot.sotish_narxi }}</td>
+                        <td>{{ mahsulot.qoldiq }}</td>
+                        <td>
+                            <a href="{% url 'products:product_update' mahsulot.id %}"
+                               class="btn btn-sm btn-warning">
+                                Tahrirlash
+                            </a>
+                        </td>
+                    </tr>
+
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">
+                            Mahsulot topilmadi.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <nav>
+            <ul class="pagination justify-content-center">
+
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link"
+                       href="?page={{ page_obj.previous_page_number }}&q={{ qidiruv|urlencode }}&category={{ kategoriya_id }}">
+                        Oldingi
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for raqam in page_obj.paginator.page_range %}
+                <li class="page-item {% if page_obj.number == raqam %}active{% endif %}">
+                    <a class="page-link"
+                       href="?page={{ raqam }}&q={{ qidiruv|urlencode }}&category={{ kategoriya_id }}">
+                        {{ raqam }}
+                    </a>
+                </li>
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link"
+                       href="?page={{ page_obj.next_page_number }}&q={{ qidiruv|urlencode }}&category={{ kategoriya_id }}">
+                        Keyingi
+                    </a>
+                </li>
+                {% endif %}
+
+            </ul>
+        </nav>
+        {% endif %}
+
+        <p class="text-muted text-center mb-0">
+            Jami mahsulotlar: {{ page_obj.paginator.count }}
+        </p>
+
+    </div>
+</div>
+
+{% endblock %}
