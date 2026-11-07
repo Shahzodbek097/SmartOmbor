@@ -6,7 +6,7 @@ from products.models import Product
 
 class OrderItemForm(forms.Form):
     product = forms.ModelChoiceField(
-        queryset=Product.objects.all(),
+        queryset=Product.objects.none(),
         label="Mahsulot",
     )
 
@@ -14,6 +14,14 @@ class OrderItemForm(forms.Form):
         min_value=1,
         label="Miqdori",
     )
+
+    def __init__(self, *args, company=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if company:
+            self.fields["product"].queryset = Product.objects.filter(
+                company=company
+            ).order_by("nomi")
 
 
 OrderItemFormSet = formset_factory(

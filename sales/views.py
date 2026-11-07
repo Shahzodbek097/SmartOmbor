@@ -8,11 +8,22 @@ from accounts.decorators import role_required, permission_required
 from .models import Order, OrderItem
 from .forms import OrderItemFormSet
 from .services import complete_order, cancel_order
+from companies.utils import get_user_company
 
 
 @role_required("Sotuvchi")
 def order_list(request):
+    company = get_user_company(request.user)
+
+    if not company:
+        messages.error(
+            request,
+            "Siz hech qanday kompaniyaga biriktirilmagansiz."
+        )
+        return redirect("accounts:login")
+
     orders = Order.objects.filter(
+        company=company,
         customer=request.user
     ).order_by("-created_at")
 
@@ -54,13 +65,26 @@ def order_list(request):
 
 @role_required("Sotuvchi")
 def order_create(request):
+    company = get_user_company(request.user)
+
+    if not company:
+        messages.error(
+            request,
+            "Siz hech qanday kompaniyaga biriktirilmagansiz."
+        )
+        return redirect("sales:order_list")
+
     if request.method == "POST":
-        formset = OrderItemFormSet(request.POST)
+        formset = OrderItemFormSet(
+            request.POST,
+            form_kwargs={"company": company},
+        )
 
         if formset.is_valid():
             with transaction.atomic():
                 buyurtma = Order.objects.create(
                     customer=request.user,
+                    company=company,
                 )
 
                 for form in formset:
@@ -72,6 +96,11 @@ def order_create(request):
 
                     product = form.cleaned_data["product"]
                     soni = form.cleaned_data["soni"]
+
+                    if product.company_id != company.id:
+                        raise ValidationError(
+                            "Bu mahsulot sizning kompaniyangizga tegishli emas."
+                        )
 
                     OrderItem.objects.create(
                         order=buyurtma,
@@ -91,7 +120,9 @@ def order_create(request):
             )
 
     else:
-        formset = OrderItemFormSet()
+        formset = OrderItemFormSet(
+            form_kwargs={"company": company},
+        )
 
     return render(
         request,
@@ -102,15 +133,29 @@ def order_create(request):
 
 @role_required("Sotuvchi", "Rahbar")
 def order_detail(request, order_id):
+    company = get_user_company(request.user)
+
+    if not company and not request.user.is_superuser:
+        messages.error(
+            request,
+            "Siz hech qanday kompaniyaga biriktirilmagansiz."
+        )
+        return redirect("sales:order_list")
+
+    orders = Order.objects.prefetch_related("items__product")
+
+    if not request.user.is_superuser:
+        orders = orders.filter(company=company)
+
     order = get_object_or_404(
-        Order.objects.prefetch_related("items__product"),
+        orders,
         id=order_id
     )
 
-    # Superuser va Rahbar barcha buyurtmalarni ko‘ra oladi
+    # Superuser va Rahbar barcha o'z kompaniyasidagi buyurtmalarni ko'ra oladi
     rahbar = request.user.groups.filter(name="Rahbar").exists()
 
-    # Sotuvchi faqat o‘z buyurtmasini ko‘ra oladi
+    # Sotuvchi faqat o'z buyurtmasini ko'ra oladi
     if not request.user.is_superuser and not rahbar:
         if order.customer_id != request.user.id:
             raise PermissionDenied
@@ -127,9 +172,16 @@ def order_finish(request, order_id):
     if request.method != "POST":
         return redirect("sales:order_list")
 
+    company = get_user_company(request.user)
+
+    if not company:
+        messages.error(request, "Siz kompaniyaga biriktirilmagansiz.")
+        return redirect("sales:order_list")
+
     buyurtma = get_object_or_404(
         Order,
         id=order_id,
+        company=company,
         customer=request.user,
     )
 
@@ -158,9 +210,16 @@ def order_cancel(request, order_id):
     if request.method != "POST":
         return redirect("sales:order_list")
 
+    company = get_user_company(request.user)
+
+    if not company:
+        messages.error(request, "Siz kompaniyaga biriktirilmagansiz.")
+        return redirect("sales:order_list")
+
     buyurtma = get_object_or_404(
         Order,
         id=order_id,
+        company=company,
         customer=request.user,
     )
 
@@ -189,8 +248,22 @@ def order_delete(request, order_id):
     if request.method != "POST":
         return redirect("sales:order_list")
 
+    company = get_user_company(request.user)
+
+    if not company and not request.user.is_superuser:
+        messages.error(
+            request,
+            "Siz hech qanday kompaniyaga biriktirilmagansiz."
+        )
+        return redirect("sales:order_list")
+
+    orders = Order.objects.all()
+
+    if not request.user.is_superuser:
+        orders = orders.filter(company=company)
+
     buyurtma = get_object_or_404(
-        Order,
+        orders,
         id=order_id,
     )
 

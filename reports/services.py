@@ -5,16 +5,39 @@ from django.utils import timezone
 from sales.models import Order, OrderItem
 from products.models import Product
 from inventory.models import OmborMovement
+from companies.models import Company
 
 
-def get_daily_report():
+def _company_filter(queryset, company):
+    if company is None:
+        return queryset.none()
+
+    return queryset.filter(company=company)
+
+
+def get_daily_report(company):
     today = timezone.localdate()
 
-    orders = Order.objects.filter(status=Order.Status.COMPLETED,created_at__date=today)
+    orders = _company_filter(
+        Order.objects.filter(
+            status=Order.Status.COMPLETED,
+            created_at__date=today
+        ),
+        company
+    )
+
     order_items = OrderItem.objects.filter(order__in=orders)
-    jami_pul = orders.aggregate(total=Sum("total_price"))["total"] or 0
-    sot_mah_soni = order_items.aggregate(total=Sum("soni"))["total"] or 0
-    yalpi_foyda = order_items.aggregate(total=Sum(
+
+    jami_pul = orders.aggregate(
+        total=Sum("total_price")
+    )["total"] or 0
+
+    sot_mah_soni = order_items.aggregate(
+        total=Sum("soni")
+    )["total"] or 0
+
+    yalpi_foyda = order_items.aggregate(
+        total=Sum(
             ExpressionWrapper(
                 (F("narxi") - F("product__xarid_narxi")) * F("soni"),
                 output_field=DecimalField(
@@ -34,21 +57,31 @@ def get_daily_report():
     }
 
 
-def get_monthly_report(year, month):
+def get_monthly_report(year, month, company):
 
-    orders = Order.objects.filter(
-        status=Order.Status.COMPLETED,
-        created_at__year=year,
-        created_at__month=month
+    orders = _company_filter(
+        Order.objects.filter(
+            status=Order.Status.COMPLETED,
+            created_at__year=year,
+            created_at__month=month
+        ),
+        company
     )
 
     order_items = OrderItem.objects.filter(order__in=orders)
-    jami_pul = orders.aggregate(total=Sum("total_price"))["total"] or 0
-    sot_mah_soni = order_items.aggregate(total=Sum("soni"))["total"] or 0
-    yalpi_foyda = order_items.aggregate(total=Sum(
+
+    jami_pul = orders.aggregate(
+        total=Sum("total_price")
+    )["total"] or 0
+
+    sot_mah_soni = order_items.aggregate(
+        total=Sum("soni")
+    )["total"] or 0
+
+    yalpi_foyda = order_items.aggregate(
+        total=Sum(
             ExpressionWrapper(
-                (F("narxi") - F("product__xarid_narxi"))
-                * F("soni"),
+                (F("narxi") - F("product__xarid_narxi")) * F("soni"),
                 output_field=DecimalField(
                     max_digits=14,
                     decimal_places=2
@@ -67,19 +100,27 @@ def get_monthly_report(year, month):
     }
 
 
-def get_low_stock_products():
+def get_low_stock_products(company):
 
-    return Product.objects.filter(qoldiq__lte=F("min_qoldiq")).order_by("qoldiq")
+    return _company_filter(
+        Product.objects.filter(
+            qoldiq__lte=F("min_qoldiq")
+        ),
+        company
+    ).order_by("qoldiq")
 
 
-def get_daily_sales_chart():
+def get_daily_sales_chart(company):
 
     today = timezone.localdate()
 
-    orders = Order.objects.filter(
-        status=Order.Status.COMPLETED,
-        created_at__year=today.year,
-        created_at__month=today.month
+    orders = _company_filter(
+        Order.objects.filter(
+            status=Order.Status.COMPLETED,
+            created_at__year=today.year,
+            created_at__month=today.month
+        ),
+        company
     )
 
     result = (
@@ -91,25 +132,39 @@ def get_daily_sales_chart():
     )
 
     return {
-        "labels": [item["sana"].strftime("%d-%m") for item in result],
-        "values": [float(item["tushum"]) for item in result]
+        "labels": [
+            item["sana"].strftime("%d-%m")
+            for item in result
+        ],
+        "values": [
+            float(item["tushum"])
+            for item in result
+        ]
     }
 
 
-def get_top_products():
+def get_top_products(company):
+
+    orders = _company_filter(
+        Order.objects.filter(
+            status=Order.Status.COMPLETED
+        ),
+        company
+    )
 
     return list(
-        OrderItem.objects.filter(order__status=Order.Status.COMPLETED)
+        OrderItem.objects.filter(order__in=orders)
         .values("product__nomi")
         .annotate(
             jami_soni=Sum("soni"),
             jami_tushum=Sum(F("narxi") * F("soni"))
-        ).order_by("-jami_soni")[:5]
+        )
+        .order_by("-jami_soni")[:5]
     )
 
 
-def get_sellers_report(sana_boshi=None, sana_oxiri=None):
-    orders = Order.objects.all()
+def get_sellers_report(company, sana_boshi=None, sana_oxiri=None):
+    orders = _company_filter(Order.objects.all(), company)
 
     if sana_boshi:
         orders = orders.filter(created_at__date__gte=sana_boshi)
@@ -160,8 +215,11 @@ def get_sellers_report(sana_boshi=None, sana_oxiri=None):
 
     return sellers
 
-def get_period_report(sana_boshi=None, sana_oxiri=None):
-    orders = Order.objects.filter(status="COMPLETED")
+def get_period_report(company, sana_boshi=None, sana_oxiri=None):
+    orders = _company_filter(
+        Order.objects.filter(status="COMPLETED"),
+        company
+    )
 
     if sana_boshi:
         orders = orders.filter(created_at__date__gte=sana_boshi)
@@ -200,8 +258,11 @@ def get_period_report(sana_boshi=None, sana_oxiri=None):
     }
 
 
-def get_period_sales_chart(sana_boshi=None, sana_oxiri=None):
-    orders = Order.objects.filter(status="COMPLETED")
+def get_period_sales_chart(company, sana_boshi=None, sana_oxiri=None):
+    orders = _company_filter(
+        Order.objects.filter(status="COMPLETED"),
+        company
+    )
 
     if sana_boshi:
         orders = orders.filter(created_at__date__gte=sana_boshi)
@@ -227,14 +288,23 @@ def get_period_sales_chart(sana_boshi=None, sana_oxiri=None):
     }
 
 
-def get_period_top_products(sana_boshi=None, sana_oxiri=None):
-    items = OrderItem.objects.filter(order__status="COMPLETED")
+def get_period_top_products(company, sana_boshi=None, sana_oxiri=None):
+    orders = _company_filter(
+        Order.objects.filter(status="COMPLETED"),
+        company
+    )
+
+    items = OrderItem.objects.filter(order__in=orders)
 
     if sana_boshi:
-        items = items.filter(order__created_at__date__gte=sana_boshi)
+        items = items.filter(
+            order__created_at__date__gte=sana_boshi
+        )
 
     if sana_oxiri:
-        items = items.filter(order__created_at__date__lte=sana_oxiri)
+        items = items.filter(
+            order__created_at__date__lte=sana_oxiri
+        )
 
     return items.values(
         "product__nomi"
@@ -252,8 +322,11 @@ def get_period_top_products(sana_boshi=None, sana_oxiri=None):
     ).order_by("-jami_soni")[:5]
 
 
-def get_inventory_report(sana_boshi=None, sana_oxiri=None):
-    movements = OmborMovement.objects.select_related("product").all()
+def get_inventory_report(company, sana_boshi=None, sana_oxiri=None):
+    movements = _company_filter(
+        OmborMovement.objects.select_related("product").all(),
+        company
+    )
 
     if sana_boshi:
         movements = movements.filter(
@@ -279,7 +352,6 @@ def get_inventory_report(sana_boshi=None, sana_oxiri=None):
         soni=Count("id")
     )
 
-    # Har bir mahsulot bo'yicha kirim va chiqim
     sana_filter = Q()
 
     if sana_boshi:
@@ -288,7 +360,10 @@ def get_inventory_report(sana_boshi=None, sana_oxiri=None):
     if sana_oxiri:
         sana_filter &= Q(movements__created_at__date__lte=sana_oxiri)
 
-    mahsulotlar = Product.objects.annotate(
+    mahsulotlar = _company_filter(
+        Product.objects.all(),
+        company
+    ).annotate(
         jami_kirim=Sum(
             "movements__nechta",
             filter=Q(movements__movement_type="IN") & sana_filter
@@ -308,8 +383,12 @@ def get_inventory_report(sana_boshi=None, sana_oxiri=None):
         "mahsulotlar": mahsulotlar,
     }
 
-def get_inventory_chart(sana_boshi=None, sana_oxiri=None):
-    movements = OmborMovement.objects.all()
+
+def get_inventory_chart(company, sana_boshi=None, sana_oxiri=None):
+    movements = _company_filter(
+        OmborMovement.objects.all(),
+        company
+    )
 
     if sana_boshi:
         movements = movements.filter(
@@ -338,7 +417,7 @@ def get_inventory_chart(sana_boshi=None, sana_oxiri=None):
         "values": [kirim, chiqim],
     }
 
-def get_product_inventory_chart(sana_boshi=None, sana_oxiri=None):
+def get_product_inventory_chart(company, sana_boshi=None, sana_oxiri=None):
     sana_filter = Q()
 
     if sana_boshi:
@@ -347,7 +426,10 @@ def get_product_inventory_chart(sana_boshi=None, sana_oxiri=None):
     if sana_oxiri:
         sana_filter &= Q(movements__created_at__date__lte=sana_oxiri)
 
-    mahsulotlar = Product.objects.annotate(
+    mahsulotlar = _company_filter(
+        Product.objects.all(),
+        company
+    ).annotate(
         jami_kirim=Sum(
             "movements__nechta",
             filter=Q(movements__movement_type="IN") & sana_filter

@@ -20,6 +20,14 @@ class OmborMovement(models.Model):
         blank=True,
         verbose_name="Harakatni amalga oshirgan"
     )
+    company = models.ForeignKey(
+        "companies.Company",
+        on_delete=models.PROTECT,
+        related_name="movements",
+        null=True,
+        blank=True,
+        verbose_name="Kompaniya"
+    )
     product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="movements")
     movement_type = models.CharField(max_length=3,choices=MovementType.choices)
     nechta = models.PositiveIntegerField(validators=[MinValueValidator(1)],verbose_name="Miqdor")

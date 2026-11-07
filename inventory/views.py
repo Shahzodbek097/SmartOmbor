@@ -8,15 +8,21 @@ from django.db import transaction
 from accounts.decorators import role_required
 from .models import OmborMovement
 from .forms import OmborMovementForm
+from companies.utils import get_user_company
+
 
 User = get_user_model()
 
 
 @role_required("Omborchi")
 def movement_list(request):
+    company = get_user_company(request.user)
+
     movements = OmborMovement.objects.select_related(
         "product",
         "user"
+    ).filter(
+        company=company
     ).order_by("-created_at")
 
     # Mahsulot nomi bo'yicha qidirish
@@ -69,6 +75,8 @@ def movement_list(request):
         "sana_boshi": sana_boshi,
         "sana_oxiri": sana_oxiri,
         "users": User.objects.filter(
+            company_memberships__company=company,
+            company_memberships__faol=True,
             ombor_harakatlari__isnull=False
         ).distinct(),
         "user_id": user_id,
@@ -81,9 +89,24 @@ def movement_create(request):
         form = OmborMovementForm(request.POST)
 
         if form.is_valid():
+            company = get_user_company(request.user)
+
+            if not company:
+                messages.error(
+                    request,
+                    "Siz hech qanday kompaniyaga biriktirilmagansiz."
+                )
+                return redirect("inventory:movement_list")
+
             try:
                 with transaction.atomic():
                     movement = form.save(commit=False)
+                    movement.company = company
+
+                    if movement.product.company_id != company.id:
+                        raise ValidationError(
+                            "Bu mahsulot sizning kompaniyangizga tegishli emas."
+                        )
                     movement.user = request.user
                     movement.save()
 

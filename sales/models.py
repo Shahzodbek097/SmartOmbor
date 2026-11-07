@@ -10,6 +10,14 @@ class Order(models.Model):
         COMPLETED = "COMPLETED", "Yakunlangan"
         CANCELLED = "CANCELLED", "Bekor qilingan"
 
+    company = models.ForeignKey(
+        "companies.Company",
+        on_delete=models.PROTECT,
+        related_name="orders",
+        null=True,
+        blank=True,
+        verbose_name="Kompaniya"
+    )
     customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT,related_name="orders")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     total_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)

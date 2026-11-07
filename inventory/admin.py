@@ -6,6 +6,7 @@ from .models import OmborMovement
 class OmborMovementAdmin(admin.ModelAdmin):
     list_display = (
         "id",
+        "company",
         "product",
         "user",
         "movement_type",
@@ -15,12 +16,14 @@ class OmborMovementAdmin(admin.ModelAdmin):
     )
 
     list_filter = (
+        "company",
         "movement_type",
         "created_at",
         "user",
     )
 
     search_fields = (
+        "company__nomi",
         "product__nomi",
         "user__username",
         "sababi",

@@ -19,7 +19,6 @@ urlpatterns = [
     path('inventory/', include('inventory.urls')),
     path('sales/', include('sales.urls')),
     path('products/', include('products.urls')),
-    path('accounts/', include('accounts.urls')),
 ]
 
 def custom_403(request, exception):

@@ -9,35 +9,48 @@ from inventory.models import OmborMovement
 @transaction.atomic
 def complete_order(order_id, user=None):
 
-    # Buyurtmani bloklab olamiz
-    order = Order.objects.select_for_update().get(
-        pk=order_id
-    )
+    order = Order.objects.select_for_update().get(pk=order_id)
 
-    # Buyurtma egasini tekshirish
-    rahbar = (
-            user and user.groups.filter(name="Rahbar").exists()
-    )
-
-    if (
-            user
-            and not user.is_superuser
-            and not rahbar
-            and order.customer_id != user.id
-    ):
+    # Kompaniya biriktirilganligini tekshirish
+    if not order.company_id:
         raise ValidationError(
-            "Siz bu buyurtmani boshqarish huquqiga ega emassiz!"
+            "Buyurtmaga kompaniya biriktirilmagan!"
         )
 
-    # Buyurtma holatini tekshiramiz
+    # Foydalanuvchining kompaniyasini tekshirish
+    rahbar = (
+        user and user.groups.filter(name="Rahbar").exists()
+    )
+
+    if user and not user.is_superuser:
+        membership = order.company.members.filter(
+            user=user,
+            faol=True,
+            company__faol=True,
+        ).exists()
+
+        if not membership:
+            raise ValidationError(
+                "Siz bu kompaniyaning a'zosi emassiz!"
+            )
+
+        if not rahbar and order.customer_id != user.id:
+            raise ValidationError(
+                "Siz bu buyurtmani boshqarish huquqiga ega emassiz!"
+            )
+
+    # Buyurtma holatini tekshirish
     if order.status == Order.Status.COMPLETED:
         raise ValidationError("Bu buyurtma avval yakunlangan!")
 
     if order.status == Order.Status.CANCELLED:
-        raise ValidationError("Bekor qilingan buyurtmani yakunlab bo'lmaydi!")
+        raise ValidationError(
+            "Bekor qilingan buyurtmani yakunlab bo'lmaydi!"
+        )
 
-    # Buyurtma mahsulotlarini olamiz
-    items = order.items.select_related("product").order_by("id")
+    items = order.items.select_related(
+        "product"
+    ).order_by("id")
 
     if not items.exists():
         raise ValidationError("Buyurtmada mahsulot mavjud emas!")
@@ -47,16 +60,22 @@ def complete_order(order_id, user=None):
     for item in items:
 
         if item.soni <= 0:
-            raise ValidationError("Mahsulot miqdori 0 dan katta bo'lishi kerak!")
+            raise ValidationError(
+                "Mahsulot miqdori 0 dan katta bo'lishi kerak!"
+            )
 
         if item.narxi <= 0:
             raise ValidationError("Mahsulot narxi noto'g'ri!")
 
-        # Buyurtma umumiy summasini hisoblaymiz
+        if item.product.company_id != order.company_id:
+            raise ValidationError(
+                "Buyurtmadagi mahsulot boshqa kompaniyaga tegishli!"
+            )
+
         total += item.subtotal
 
-        # Ombordan mahsulot chiqimini yaratamiz
         movement = OmborMovement(
+            company=order.company,
             product=item.product,
             user=user,
             movement_type=OmborMovement.MovementType.OUT,
@@ -66,7 +85,6 @@ def complete_order(order_id, user=None):
 
         movement.save()
 
-    # Buyurtmani yakunlaymiz
     order.total_price = total
     order.status = Order.Status.COMPLETED
     order.save(update_fields=["total_price", "status"])
@@ -77,49 +95,47 @@ def complete_order(order_id, user=None):
 @transaction.atomic
 def cancel_order(order_id, user=None):
 
-    order = Order.objects.select_for_update().get(
-        pk=order_id
-    )
+    order = Order.objects.select_for_update().get(pk=order_id)
 
-    # Buyurtma egasini tekshirish
-    rahbar = (
-            user and user.groups.filter(name="Rahbar").exists()
-    )
-
-    if (
-            user
-            and not user.is_superuser
-            and not rahbar
-            and order.customer_id != user.id
-    ):
+    # Kompaniya biriktirilganligini tekshirish
+    if not order.company_id:
         raise ValidationError(
-            "Siz bu buyurtmani boshqarish huquqiga ega emassiz!"
+            "Buyurtmaga kompaniya biriktirilmagan!"
         )
 
-    if order.status == Order.Status.CANCELLED:
-        raise ValidationError("Bu buyurtma avval bekor qilingan!")
+    # Foydalanuvchining kompaniyasini tekshirish
+    rahbar = (
+        user and user.groups.filter(name="Rahbar").exists()
+    )
 
-    if order.status == Order.Status.COMPLETED:
+    if user and not user.is_superuser:
+        membership = order.company.members.filter(
+            user=user,
+            faol=True,
+            company__faol=True,
+        ).exists()
 
-        items = order.items.select_related(
-            "product"
-        ).order_by("product_id", "id")
-
-        for item in items:
-
-            movement = OmborMovement(
-                product=item.product,
-                user=user,
-                movement_type=OmborMovement.MovementType.IN,
-                nechta=item.soni,
-                sababi=f"Buyurtma #{order.id} bekor qilindi"
+        if not membership:
+            raise ValidationError(
+                "Siz bu kompaniyaning a'zosi emassiz!"
             )
 
-            movement.save()
+        if not rahbar and order.customer_id != user.id:
+            raise ValidationError(
+                "Siz bu buyurtmani boshqarish huquqiga ega emassiz!"
+            )
+
+    if order.status == Order.Status.CANCELLED:
+        raise ValidationError(
+            "Bu buyurtma avval bekor qilingan!"
+        )
+
+    if order.status == Order.Status.COMPLETED:
+        raise ValidationError(
+            "Yakunlangan buyurtmani bekor qilib bo'lmaydi!"
+        )
 
     order.status = Order.Status.CANCELLED
-
     order.save(update_fields=["status"])
 
     return order
-

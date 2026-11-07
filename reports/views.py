@@ -17,6 +17,7 @@ from reportlab.platypus import (
 )
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
+from companies.utils import get_user_company
 
 from .services import (
     get_daily_report,
@@ -33,17 +34,19 @@ from .services import (
 
 @role_required("Rahbar", "Omborchi", "Sotuvchi")
 def dashboard(request):
+    company = get_user_company(request.user)
+
     sana_boshi = request.GET.get("date_from", "")
     sana_oxiri = request.GET.get("date_to", "")
 
     boshlanish = parse_date(sana_boshi) if sana_boshi else None
     tugash = parse_date(sana_oxiri) if sana_oxiri else None
 
-    davr = get_period_report(boshlanish, tugash)
+    davr = get_period_report(company, boshlanish, tugash)
 
     is_rahbar = (
-            request.user.is_superuser
-            or request.user.groups.filter(name="Rahbar").exists()
+        request.user.is_superuser
+        or request.user.groups.filter(name="Rahbar").exists()
     )
 
     is_omborchi = request.user.groups.filter(name="Omborchi").exists()
@@ -51,11 +54,13 @@ def dashboard(request):
 
     context = {
         "davr": davr,
-        "davr_grafigi": get_period_sales_chart(boshlanish, tugash),
-        "davr_top_mahsulotlar": get_period_top_products(
-            boshlanish, tugash
+        "davr_grafigi": get_period_sales_chart(
+            company, boshlanish, tugash
         ),
-        "kam_qolgan": get_low_stock_products(),
+        "davr_top_mahsulotlar": get_period_top_products(
+            company, boshlanish, tugash
+        ),
+        "kam_qolgan": get_low_stock_products(company),
         "sana_boshi": sana_boshi,
         "sana_oxiri": sana_oxiri,
         "is_rahbar": is_rahbar,
@@ -68,6 +73,8 @@ def dashboard(request):
 
 @role_required("Rahbar")
 def sellers_report(request):
+    company = get_user_company(request.user)
+
     sana_boshi = request.GET.get("date_from", "")
     sana_oxiri = request.GET.get("date_to", "")
 
@@ -76,6 +83,7 @@ def sellers_report(request):
 
     context = {
         "sotuvchilar": get_sellers_report(
+            company,
             boshlanish,
             tugash
         ),
@@ -125,7 +133,7 @@ def excel_header(sheet):
 
 @role_required("Rahbar")
 def export_dashboard_excel(request):
-    from .services import get_period_report
+    company = get_user_company(request.user)
 
     sana_boshi = request.GET.get("date_from", "")
     sana_oxiri = request.GET.get("date_to", "")
@@ -133,7 +141,11 @@ def export_dashboard_excel(request):
     boshlanish = parse_date(sana_boshi) if sana_boshi else None
     tugash = parse_date(sana_oxiri) if sana_oxiri else None
 
-    report = get_period_report(boshlanish, tugash)
+    report = get_period_report(
+        company,
+        boshlanish,
+        tugash
+    )
 
     workbook = Workbook()
     sheet = workbook.active
@@ -156,13 +168,19 @@ def export_dashboard_excel(request):
 
 @role_required("Rahbar")
 def export_sellers_excel(request):
+    company = get_user_company(request.user)
+
     sana_boshi = request.GET.get("date_from", "")
     sana_oxiri = request.GET.get("date_to", "")
 
     boshlanish = parse_date(sana_boshi) if sana_boshi else None
     tugash = parse_date(sana_oxiri) if sana_oxiri else None
 
-    sellers = get_sellers_report(boshlanish, tugash)
+    sellers = get_sellers_report(
+        company,
+        boshlanish,
+        tugash
+    )
 
     workbook = Workbook()
     sheet = workbook.active
