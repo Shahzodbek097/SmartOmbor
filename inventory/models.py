@@ -48,6 +48,19 @@ class OmborMovement(models.Model):
             # Mahsulot qatorini bloklaymiz.
             product = Product.objects.select_for_update().get(pk=self.product_id)
 
+            if not product.company_id:
+                raise ValidationError(
+                    "Mahsulot hech qanday kompaniyaga biriktirilmagan!"
+                )
+
+            if self.company_id is None:
+                self.company_id = product.company_id
+
+            elif self.company_id != product.company_id:
+                raise ValidationError(
+                    "Ombor harakati va mahsulot boshqa-boshqa kompaniyalarga tegishli!"
+                )
+
             if self.movement_type == self.MovementType.IN:
                 Product.objects.filter(pk=product.pk).update(qoldiq=F("qoldiq") + self.nechta)
 

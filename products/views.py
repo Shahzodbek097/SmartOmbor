@@ -58,7 +58,7 @@ def product_create(request):
         messages.error(request, "Siz hech qanday faol kompaniyaga biriktirilmagansiz.")
         return redirect("products:product_list")
 
-    form = ProductForm(request.POST or None)
+    form = ProductForm(request.POST or None, company=company)
 
     if request.method == "POST" and form.is_valid():
         mahsulot = form.save(commit=False)
@@ -89,7 +89,8 @@ def product_update(request, product_id):
 
     form = ProductForm(
         request.POST or None,
-        instance=mahsulot
+        instance=mahsulot,
+        company=company
     )
 
     if request.method == "POST" and form.is_valid():

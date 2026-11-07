@@ -85,8 +85,10 @@ def movement_list(request):
 
 @role_required("Omborchi")
 def movement_create(request):
+    company = get_user_company(request.user)
+
     if request.method == "POST":
-        form = OmborMovementForm(request.POST)
+        form = OmborMovementForm(request.POST or None, company=company)
 
         if form.is_valid():
             company = get_user_company(request.user)
@@ -124,7 +126,7 @@ def movement_create(request):
                 )
 
     else:
-        form = OmborMovementForm()
+        form = OmborMovementForm(company=company)
 
     context = {
         "form": form,

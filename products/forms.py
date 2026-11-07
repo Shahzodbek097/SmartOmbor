@@ -3,6 +3,17 @@ from .models import Product, Category
 
 
 class ProductForm(forms.ModelForm):
+
+    def __init__(self, *args, company=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if company:
+            self.fields["category"].queryset = Category.objects.filter(
+                company=company
+            ).order_by("nomi")
+        else:
+            self.fields["category"].queryset = Category.objects.none()
+
     class Meta:
         model = Product
         fields = [

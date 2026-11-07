@@ -18,21 +18,19 @@ def complete_order(order_id, user=None):
         )
 
     # Foydalanuvchining kompaniyasini tekshirish
-    rahbar = (
-        user and user.groups.filter(name="Rahbar").exists()
-    )
-
     if user and not user.is_superuser:
         membership = order.company.members.filter(
             user=user,
             faol=True,
             company__faol=True,
-        ).exists()
+        ).first()
 
         if not membership:
             raise ValidationError(
                 "Siz bu kompaniyaning a'zosi emassiz!"
             )
+
+        rahbar = membership.role == "Rahbar"
 
         if not rahbar and order.customer_id != user.id:
             raise ValidationError(
@@ -80,7 +78,7 @@ def complete_order(order_id, user=None):
             user=user,
             movement_type=OmborMovement.MovementType.OUT,
             nechta=item.soni,
-            sababi=f"Buyurtma #{order.id}"
+            sababi=f"Buyurtma #{order.buyurtma_raqami}"
         )
 
         movement.save()
@@ -104,21 +102,19 @@ def cancel_order(order_id, user=None):
         )
 
     # Foydalanuvchining kompaniyasini tekshirish
-    rahbar = (
-        user and user.groups.filter(name="Rahbar").exists()
-    )
-
     if user and not user.is_superuser:
         membership = order.company.members.filter(
             user=user,
             faol=True,
             company__faol=True,
-        ).exists()
+        ).first()
 
         if not membership:
             raise ValidationError(
                 "Siz bu kompaniyaning a'zosi emassiz!"
             )
+
+        rahbar = membership.role == "Rahbar"
 
         if not rahbar and order.customer_id != user.id:
             raise ValidationError(

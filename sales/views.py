@@ -153,7 +153,12 @@ def order_detail(request, order_id):
     )
 
     # Superuser va Rahbar barcha o'z kompaniyasidagi buyurtmalarni ko'ra oladi
-    rahbar = request.user.groups.filter(name="Rahbar").exists()
+    rahbar = request.user.company_memberships.filter(
+        company=company,
+        faol=True,
+        company__faol=True,
+        role="Rahbar"
+    ).exists()
 
     # Sotuvchi faqat o'z buyurtmasini ko'ra oladi
     if not request.user.is_superuser and not rahbar:
@@ -268,7 +273,12 @@ def order_delete(request, order_id):
     )
 
     # Sotuvchi faqat o'z buyurtmasini o'chira oladi
-    rahbar = request.user.groups.filter(name="Rahbar").exists()
+    rahbar = request.user.company_memberships.filter(
+        company=company,
+        faol=True,
+        company__faol=True,
+        role="Rahbar"
+    ).exists()
 
     if not request.user.is_superuser and not rahbar:
         if buyurtma.customer_id != request.user.id:
@@ -298,7 +308,18 @@ def order_delete(request, order_id):
 
 @permission_required("sales.view_order")
 def manager_order_list(request):
-    orders = Order.objects.select_related("customer").order_by("-created_at")
+    company = get_user_company(request.user)
+
+    if not company:
+        messages.error(
+            request,
+            "Siz hech qanday faol kompaniyaga biriktirilmagansiz."
+        )
+        return redirect("accounts:login")
+
+    orders = Order.objects.filter(
+        company=company
+    ).select_related("customer").order_by("-created_at")
 
     # Buyurtma ID bo‘yicha qidirish
     qidiruv = request.GET.get("q", "").strip()

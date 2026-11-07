@@ -44,7 +44,7 @@ class OrderAdmin(admin.ModelAdmin):
                 error_count += 1
                 self.message_user(
                     request,
-                    f"Buyurtma #{order.id}: {e}",
+                    f"Buyurtma #{order.buyurtma_raqami}: {e}",
                     level=messages.ERROR
                 )
 
@@ -78,7 +78,7 @@ class OrderAdmin(admin.ModelAdmin):
 
                 self.message_user(
                     request,
-                    f"Buyurtma #{order.id}: {e}",
+                    f"Buyurtma #{order.buyurtma_raqami}: {e}",
                     level=messages.ERROR
                 )
 

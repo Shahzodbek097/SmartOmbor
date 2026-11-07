@@ -151,6 +151,7 @@ def export_dashboard_excel(request):
     sheet = workbook.active
     sheet.title = "Dashboard hisoboti"
 
+    sheet.append(["Kompaniya", company.nomi])
     sheet.append(["Ko‘rsatkich", "Natija"])
 
     sheet.append(["Buyurtmalar soni", report["buyurtmalar_soni"]])
@@ -186,6 +187,8 @@ def export_sellers_excel(request):
     sheet = workbook.active
     sheet.title = "Sotuvchilar hisoboti"
 
+    sheet.append(["Kompaniya", company.nomi])
+    sheet.append([])
     sheet.append([
         "Sotuvchi",
         "Jami buyurtmalar",
@@ -263,15 +266,17 @@ def create_pdf(title, headers, data, filename):
 
 @role_required("Rahbar")
 def export_dashboard_pdf(request):
+    company = get_user_company(request.user)
     sana_boshi = request.GET.get("date_from", "")
     sana_oxiri = request.GET.get("date_to", "")
 
     boshlanish = parse_date(sana_boshi) if sana_boshi else None
     tugash = parse_date(sana_oxiri) if sana_oxiri else None
 
-    report = get_period_report(boshlanish, tugash)
+    report = get_period_report(company, boshlanish, tugash)
 
     data = [
+        ["Kompaniya", company.nomi],
         ["Buyurtmalar soni", report["buyurtmalar_soni"]],
         ["Savdo summasi", f'{report["savdo_summasi"]} so‘m'],
         ["Sotilgan mahsulotlar", report["sotilgan_mahsulotlar"]],
@@ -290,15 +295,19 @@ def export_dashboard_pdf(request):
 
 @role_required("Rahbar")
 def export_sellers_pdf(request):
+    company = get_user_company(request.user)
     sana_boshi = request.GET.get("date_from", "")
     sana_oxiri = request.GET.get("date_to", "")
 
     boshlanish = parse_date(sana_boshi) if sana_boshi else None
     tugash = parse_date(sana_oxiri) if sana_oxiri else None
 
-    sellers = get_sellers_report(boshlanish, tugash)
+    sellers = get_sellers_report(company, boshlanish, tugash)
 
     data = []
+
+    data.append(["Kompaniya", company.nomi])
+    data.append([])
 
     for seller in sellers:
         data.append([
@@ -326,20 +335,23 @@ def export_sellers_pdf(request):
 
 @role_required("Rahbar")
 def inventory_report(request):
+    company = get_user_company(request.user)
     sana_boshi = request.GET.get("date_from", "")
     sana_oxiri = request.GET.get("date_to", "")
 
     boshlanish = parse_date(sana_boshi) if sana_boshi else None
     tugash = parse_date(sana_oxiri) if sana_oxiri else None
 
-    report = get_inventory_report(boshlanish, tugash)
+    report = get_inventory_report(company, boshlanish, tugash)
 
     context = {
         "report": report,
         "sana_boshi": sana_boshi,
         "sana_oxiri": sana_oxiri,
-        "inventory_chart": get_inventory_chart(boshlanish, tugash),
-        "product_inventory_chart": get_product_inventory_chart(boshlanish, tugash),
+        "inventory_chart": get_inventory_chart(company, boshlanish, tugash),
+        "product_inventory_chart": get_product_inventory_chart(
+            company, boshlanish, tugash
+        ),
     }
 
     return render(
@@ -350,13 +362,14 @@ def inventory_report(request):
 
 @role_required("Rahbar")
 def export_inventory_excel(request):
+    company = get_user_company(request.user)
     sana_boshi = request.GET.get("date_from", "")
     sana_oxiri = request.GET.get("date_to", "")
 
     boshlanish = parse_date(sana_boshi) if sana_boshi else None
     tugash = parse_date(sana_oxiri) if sana_oxiri else None
 
-    report = get_inventory_report(boshlanish, tugash)
+    report = get_inventory_report(company, boshlanish, tugash)
 
     workbook = Workbook()
     sheet = workbook.active
@@ -387,6 +400,9 @@ def export_inventory_excel(request):
 
     sheet["A9"] = "Chiqim harakatlari"
     sheet["B9"] = report["chiqim_harakatlari"]
+
+    sheet.append(["Kompaniya", company.nomi])
+    sheet.append([])
 
     # Mahsulotlar jadvali
     headers = [
@@ -446,13 +462,14 @@ def export_inventory_excel(request):
 
 @role_required("Rahbar")
 def export_inventory_pdf(request):
+    company = get_user_company(request.user)
     sana_boshi = request.GET.get("date_from", "")
     sana_oxiri = request.GET.get("date_to", "")
 
     boshlanish = parse_date(sana_boshi) if sana_boshi else None
     tugash = parse_date(sana_oxiri) if sana_oxiri else None
 
-    report = get_inventory_report(boshlanish, tugash)
+    report = get_inventory_report(company, boshlanish, tugash)
 
     buffer = BytesIO()
 
@@ -510,6 +527,8 @@ def export_inventory_pdf(request):
     elements.append(Spacer(1, 20))
 
     data = [
+        ["Kompaniya", company.nomi],
+        [],
         ["№", "Mahsulot nomi", "Kirim", "Chiqim", "Joriy qoldiq"]
     ]
 

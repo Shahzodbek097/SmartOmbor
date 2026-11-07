@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 
 
 class Category(models.Model):
@@ -22,6 +23,14 @@ class Category(models.Model):
             )
         ]
 
+    def save(self, *args, **kwargs):
+        if not self.company_id:
+            raise ValidationError(
+                "Kategoriya kompaniyaga biriktirilishi kerak!"
+            )
+
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.nomi
 
@@ -41,6 +50,24 @@ class Product(models.Model):
     qoldiq=models.PositiveIntegerField(default=0)
     min_qoldiq=models.PositiveIntegerField(default=10)
     created_at=models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.company_id:
+            raise ValidationError(
+                "Mahsulot kompaniyaga biriktirilishi kerak!"
+            )
+
+        kategoriya_mos = Category.objects.filter(
+            pk=self.category_id,
+            company_id=self.company_id
+        ).exists()
+
+        if not kategoriya_mos:
+            raise ValidationError(
+                "Mahsulot kategoriyasi boshqa kompaniyaga tegishli!"
+            )
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.nomi
