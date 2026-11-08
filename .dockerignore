@@ -22,3 +22,8 @@ media/
 
 # Database migration data
 sqlite_to_postgres_fixture.json
+
+# Database backups
+backups/
+*.dump
+*.backup

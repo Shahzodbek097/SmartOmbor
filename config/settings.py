@@ -294,3 +294,42 @@ CELERY_BEAT_SCHEDULE = {
         ),
     },
 }
+
+
+
+# PRODUCTION SECURITY SETTINGS
+
+def env_bool(name, default=False):
+    return os.environ.get(
+        name,
+        str(default)
+    ).lower() in ("1", "true", "yes", "on")
+
+
+# HTTPS faqat SSL sertifikati va reverse proxy tayyor bo'lganda yoqiladi.
+HTTPS_ENABLED = env_bool("DJANGO_HTTPS_ENABLED", False)
+
+SECURE_SSL_REDIRECT = HTTPS_ENABLED
+
+SESSION_COOKIE_SECURE = HTTPS_ENABLED
+CSRF_COOKIE_SECURE = HTTPS_ENABLED
+
+# Brauzer xavfsizligi
+SECURE_CONTENT_TYPE_NOSNIFF = True
+
+X_FRAME_OPTIONS = "DENY"
+
+SECURE_REFERRER_POLICY = "same-origin"
+
+# Domenlar uchun CSRF ruxsatlari
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        "DJANGO_CSRF_TRUSTED_ORIGINS",
+        ""
+    ).split(",")
+    if origin.strip()
+]
+
+# HSTS SSL to'liq sozlangandan keyin yoqiladi.
+SECURE_HSTS_SECONDS = 0
