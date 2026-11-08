@@ -99,3 +99,56 @@ jobs:
 
       - name: Docker image'larini yig'ish
         run: docker compose build web celery_worker celery_beat
+
+
+  publish-image:
+    name: Docker image ni GHCR ga chiqarish
+
+    needs: test-and-build
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Repository kodlarini olish
+        uses: actions/checkout@v7
+
+      - name: Docker Buildx sozlash
+        uses: docker/setup-buildx-action@v4.4.1
+
+      - name: Image nomini tayyorlash
+        id: image
+        shell: bash
+        run: |
+          echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - name: GitHub Container Registry ga kirish
+        uses: docker/login-action@v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker image uchun teglar yaratish
+        id: meta
+        uses: docker/metadata-action@v6.2.0
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=sha-
+
+      - name: Docker image ni yig'ish va GHCR ga yuborish
+        uses: docker/build-push-action@v7.4.0
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
