@@ -1,2 +1,148 @@
 services:
-  $END$
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-smartombor}
+      POSTGRES_USER: ${POSTGRES_USER:-smartombor_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+    command: redis-server --appendonly yes
+
+    volumes:
+      - redis_data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+
+  web:
+    build: .
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    environment:
+      DB_ENGINE: postgresql
+      DB_NAME: ${POSTGRES_DB:-smartombor}
+      DB_USER: ${POSTGRES_USER:-smartombor_user}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_HOST: db
+      DB_PORT: 5432
+
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+
+
+    command:
+      - /bin/sh
+      - -c
+      - |
+        python manage.py migrate &&
+        python manage.py collectstatic --noinput &&
+        exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --no-control-socket
+  
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+
+  celery_worker:
+    build: .
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    environment:
+      DB_ENGINE: postgresql
+      DB_NAME: ${POSTGRES_DB:-smartombor}
+      DB_USER: ${POSTGRES_USER:-smartombor_user}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_HOST: db
+      DB_PORT: 5432
+
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+
+    command: celery -A config worker --loglevel=info
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+
+  celery_beat:
+    build: .
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    environment:
+      DB_ENGINE: postgresql
+      DB_NAME: ${POSTGRES_DB:-smartombor}
+      DB_USER: ${POSTGRES_USER:-smartombor_user}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_HOST: db
+      DB_PORT: 5432
+
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+
+    command: >
+      celery -A config beat
+      --loglevel=info
+      --schedule=/app/celerybeat-data/celerybeat-schedule
+
+    volumes:
+      - celerybeat_data:/app/celerybeat-data
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_volume:
+  media_volume:
+  celerybeat_data:
+

@@ -226,3 +226,6 @@ staticfiles/
 
 # PyCharm
 .idea/
+
+# Database migration data
+sqlite_to_postgres_fixture.json

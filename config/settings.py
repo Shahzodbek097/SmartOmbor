@@ -10,23 +10,47 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+
+import os
 from pathlib import Path
+from celery.schedules import crontab
 from datetime import timedelta
+from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
+
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+load_dotenv(BASE_DIR/".env")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'SECRET_KEY'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY') or os.environ.get('SECRET_KEY')
+
+if not SECRET_KEY:
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY .env faylida sozlanmagan!")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
 ALLOWED_HOSTS = ['*']
+
+
+DEBUG = os.environ.get(
+    "DJANGO_DEBUG",
+    "False"
+).lower() in ("1", "true", "yes")
+
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get(
+        "DJANGO_ALLOWED_HOSTS",
+        "localhost,127.0.0.1"
+    ).split(",")
+    if host.strip()
+]
 
 
 # Application definition
@@ -41,7 +65,8 @@ INSTALLED_APPS = [
 
     'rest_framework',
     'drf_yasg',
-    
+    'djoser',
+
     'products',
     'sales',
     'inventory',
@@ -53,6 +78,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -84,12 +110,28 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if os.environ.get("DB_ENGINE", "sqlite").lower() == "postgresql":
+
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ.get("POSTGRES_DB"),
+            "USER": os.environ.get("POSTGRES_USER"),
+            "PASSWORD": os.environ.get("POSTGRES_PASSWORD"),
+            "HOST": os.environ.get("DB_HOST"),
+            "PORT": os.environ.get("DB_PORT"),
+            "CONN_MAX_AGE": 60,
+        }
     }
-}
+
+else:
+
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 
 # Password validation
@@ -114,12 +156,10 @@ DATABASES = {
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
+LANGUAGE_CODE = "uz"
+TIME_ZONE = "Asia/Tashkent"
 
 USE_I18N = True
-
 USE_TZ = True
 
 
@@ -127,15 +167,16 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-LOGIN_URL = "/accounts/login/"
-LOGIN_REDIRECT_URL = "/dashboard/"
-LOGOUT_REDIRECT_URL = "/accounts/login/"
+LOGIN_URL = "accounts:login"
+LOGIN_REDIRECT_URL = "reports:dashboard"
+LOGOUT_REDIRECT_URL = "accounts:login"
 
 CSRF_FAILURE_VIEW = "django.views.csrf.csrf_failure"
 
@@ -147,13 +188,9 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = ["EMAIL_HOST_USER"]
-EMAIL_HOST_PASSWORD = ['EMAIL_HOST_PASSWORD']
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-
-LOGIN_URL = "accounts:login"
-LOGIN_REDIRECT_URL = "reports:dashboard"
-LOGOUT_REDIRECT_URL = "accounts:login"
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = os.environ.get("EMAIL_HOST_USER")
 
 
 REST_FRAMEWORK = {
@@ -190,3 +227,70 @@ SWAGGER_SETTINGS = {
 }
 
 
+
+DJOSER = {
+    "PASSWORD_RESET_CONFIRM_URL": "accounts/reset/{uid}/{token}/",
+    "USERNAME_RESET_CONFIRM_URL": "accounts/username/reset/{uid}/{token}/",
+    "ACTIVATION_URL": "accounts/activate/{uid}/{token}/",
+
+    "USER_CREATE_PASSWORD_RETYPE": True,
+    "SET_PASSWORD_RETYPE": True,
+    "PASSWORD_RESET_CONFIRM_RETYPE": True,
+
+    "HIDE_USERS": True,
+
+    "PERMISSIONS": {
+        "user_create": [
+            "api.permissions.DenyDjoserUserCreate"
+        ],
+        "user_delete": [
+            "api.permissions.DenyDjoserUserCreate"
+        ],
+    },
+}
+
+
+
+# CELERY CONFIGURATION
+
+CELERY_BROKER_URL = os.environ.get(
+    "CELERY_BROKER_URL",
+    "redis://127.0.0.1:6379/0"
+)
+
+CELERY_RESULT_BACKEND = os.environ.get(
+    "CELERY_RESULT_BACKEND",
+    "redis://127.0.0.1:6379/1"
+)
+
+
+CELERY_ACCEPT_CONTENT = ["json"]
+
+CELERY_TASK_SERIALIZER = "json"
+
+CELERY_RESULT_SERIALIZER = "json"
+
+
+
+CELERY_TASK_TRACK_STARTED = True
+
+CELERY_TASK_TIME_LIMIT = 30 * 60
+
+
+# CELERY BEAT
+
+CELERY_TIMEZONE = "Asia/Tashkent"
+
+CELERY_ENABLE_UTC = True
+
+CELERY_RESULT_EXPIRES = 86400
+
+CELERY_BEAT_SCHEDULE = {
+    "daily-company-sales-reports": {
+        "task": "reports.tasks.generate_all_daily_sales_reports",
+        "schedule": crontab(
+            hour=23,
+            minute=55
+        ),
+    },
+}

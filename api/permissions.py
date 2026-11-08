@@ -50,3 +50,15 @@ class CompanyRolePermission(BasePermission):
             return True
 
         return membership.role in allowed_roles
+
+
+
+class DenyDjoserUserCreate(BasePermission):
+    """
+    Djoser orqali kompaniyasiz foydalanuvchi
+    yaratishni taqiqlaydi.
+    """
+
+    def has_permission(self, request, view):
+        return False
+
