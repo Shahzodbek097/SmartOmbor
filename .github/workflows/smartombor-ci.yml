@@ -1,0 +1,101 @@
+name: SmartOmbor CI/CD
+
+on:
+  push:
+    branches: [main]
+
+  pull_request:
+    branches: [main]
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: smartombor
+          POSTGRES_USER: smartombor_user
+          POSTGRES_PASSWORD: ci-only-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U smartombor_user -d smartombor"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DJANGO_SECRET_KEY: ci-only-secret-key
+      DJANGO_DEBUG: "1"
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,web
+
+      DB_ENGINE: postgresql
+      POSTGRES_DB: smartombor
+      POSTGRES_USER: smartombor_user
+      POSTGRES_PASSWORD: ci-only-password
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+
+      CELERY_BROKER_URL: redis://127.0.0.1:6379/0
+      CELERY_RESULT_BACKEND: redis://127.0.0.1:6379/1
+
+    steps:
+      - name: Repository kodlarini olish
+        uses: actions/checkout@v7
+
+      - name: Python 3.11 ni o'rnatish
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Kutubxonalarni o'rnatish
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Django tekshiruvi
+        run: python manage.py check
+
+      - name: Migratsiyalarni tekshirish
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: API testlarini bajarish
+        run: python manage.py test api -v 2
+
+      - name: CI uchun vaqtinchalik env yaratish
+        run: |
+          cat > .env <<'EOF'
+          DJANGO_SECRET_KEY=ci-only-secret-key
+          DJANGO_DEBUG=1
+          DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,web
+          POSTGRES_DB=smartombor
+          POSTGRES_USER=smartombor_user
+          POSTGRES_PASSWORD=ci-only-password
+          CELERY_BROKER_URL=redis://redis:6379/0
+          CELERY_RESULT_BACKEND=redis://redis:6379/1
+          EOF
+
+      - name: Docker Compose konfiguratsiyasini tekshirish
+        run: docker compose config -q
+
+      - name: Docker image'larini yig'ish
+        run: docker compose build web celery_worker celery_beat
