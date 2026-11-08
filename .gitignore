@@ -219,3 +219,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Django uploaded files
+media/
+staticfiles/
+
+# PyCharm
+.idea/

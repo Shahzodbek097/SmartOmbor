@@ -103,3 +103,63 @@ class ProfileUpdateForm(forms.ModelForm):
             field.widget.attrs.update({
                 "class": "form-control"
             })
+
+
+
+class RegisterForm(UserCreationForm):
+    first_name = forms.CharField(
+        max_length=150,
+        label="Ism"
+    )
+
+    last_name = forms.CharField(
+        max_length=150,
+        label="Familiya"
+    )
+
+    email = forms.EmailField(
+        label="Elektron pochta",
+        required=True
+    )
+
+    company_nomi = forms.CharField(
+        max_length=200,
+        label="Kompaniya nomi"
+    )
+
+    company_manzil = forms.CharField(
+        max_length=255,
+        label="Kompaniya manzili",
+        required=False
+    )
+
+    company_telefon = forms.CharField(
+        max_length=20,
+        label="Kompaniya telefoni",
+        required=False
+    )
+
+    company_email = forms.EmailField(
+        label="Kompaniya elektron pochtasi",
+        required=False
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            "username",
+            "first_name",
+            "last_name",
+            "email",
+        ]
+        labels = {
+            "username": "Login",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        for field in self.fields.values():
+            field.widget.attrs.update({
+                "class": "form-control"
+            })

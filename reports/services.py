@@ -352,7 +352,7 @@ def get_inventory_report(company, sana_boshi=None, sana_oxiri=None):
         soni=Count("id")
     )
 
-    sana_filter = Q()
+    sana_filter = Q(movements__company=company)
 
     if sana_boshi:
         sana_filter &= Q(movements__created_at__date__gte=sana_boshi)

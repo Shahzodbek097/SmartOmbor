@@ -44,13 +44,24 @@ def dashboard(request):
 
     davr = get_period_report(company, boshlanish, tugash)
 
+    membership = request.user.company_memberships.filter(
+        company=company,
+        faol=True,
+        company__faol=True
+    ).first()
+
     is_rahbar = (
-        request.user.is_superuser
-        or request.user.groups.filter(name="Rahbar").exists()
+            request.user.is_superuser
+            or bool(membership and membership.role == "Rahbar")
     )
 
-    is_omborchi = request.user.groups.filter(name="Omborchi").exists()
-    is_sotuvchi = request.user.groups.filter(name="Sotuvchi").exists()
+    is_omborchi = bool(
+        membership and membership.role == "Omborchi"
+    )
+
+    is_sotuvchi = bool(
+        membership and membership.role == "Sotuvchi"
+    )
 
     context = {
         "davr": davr,
