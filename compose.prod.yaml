@@ -2,6 +2,9 @@ services:
 
   # Production Django sozlamalari
   web:
+    image: ghcr.io/shahzodbek097/smartombor:latest
+    build: !reset null
+    pull_policy: always
     ports: !reset []
 
     environment:
@@ -23,6 +26,9 @@ services:
 
   # Celery Worker
   celery_worker:
+    image: ghcr.io/shahzodbek097/smartombor:latest
+    build: !reset null
+    pull_policy: always
     environment:
       DJANGO_DEBUG: "0"
       DJANGO_HTTPS_ENABLED: "0"
@@ -31,6 +37,9 @@ services:
 
   # Celery Beat
   celery_beat:
+    image: ghcr.io/shahzodbek097/smartombor:latest
+    build: !reset null
+    pull_policy: always
     environment:
       DJANGO_DEBUG: "0"
       DJANGO_HTTPS_ENABLED: "0"
