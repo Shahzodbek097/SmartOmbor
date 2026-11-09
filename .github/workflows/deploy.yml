@@ -118,7 +118,18 @@ jobs:
           fi
 
           echo "GitHub kodlari yangilanmoqda..."
+          
+          echo "Deploydan oldin PostgreSQL backup olinmoqda..."
 
+          if [ -f scripts/backup_db.sh ]; then
+              bash scripts/backup_db.sh
+          else
+              echo "Backup skripti topilmadi!"
+              exit 1
+          fi
+          
+          echo "Backup muvaffaqiyatli yakunlandi."
+          
           git fetch --prune origin main
           git reset --hard origin/main
 
