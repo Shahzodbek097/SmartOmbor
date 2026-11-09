@@ -90,8 +90,7 @@ jobs:
           POSTGRES_DB=smartombor
           POSTGRES_USER=smartombor_user
           POSTGRES_PASSWORD=ci-only-password
-          CELERY_BROKER_URL=redis://redis:6379/0
-          CELERY_RESULT_BACKEND=redis://redis:6379/1
+          REDIS_PASSWORD=ci-only-redis-password
           EOF
 
       - name: Docker Compose konfiguratsiyasini tekshirish

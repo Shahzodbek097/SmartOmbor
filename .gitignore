@@ -234,3 +234,9 @@ sqlite_to_postgres_fixture.json
 backups/
 *.dump
 *.backup
+
+# Environment secrets
+.env.*
+
+# Public template
+!.env.example

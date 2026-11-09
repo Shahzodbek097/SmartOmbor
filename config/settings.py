@@ -35,7 +35,7 @@ if not SECRET_KEY:
 
 # SECURITY WARNING: don't run with debug turned on in production!
 
-ALLOWED_HOSTS = ['*']
+# ALLOWED_HOSTS = ['*']
 
 
 DEBUG = os.environ.get(
@@ -263,28 +263,18 @@ CELERY_RESULT_BACKEND = os.environ.get(
     "redis://127.0.0.1:6379/1"
 )
 
-
 CELERY_ACCEPT_CONTENT = ["json"]
-
 CELERY_TASK_SERIALIZER = "json"
-
 CELERY_RESULT_SERIALIZER = "json"
-
-
-
 CELERY_TASK_TRACK_STARTED = True
-
 CELERY_TASK_TIME_LIMIT = 30 * 60
 
 
 # CELERY BEAT
 
 CELERY_TIMEZONE = "Asia/Tashkent"
-
 CELERY_ENABLE_UTC = True
-
 CELERY_RESULT_EXPIRES = 86400
-
 CELERY_BEAT_SCHEDULE = {
     "daily-company-sales-reports": {
         "task": "reports.tasks.generate_all_daily_sales_reports",
@@ -293,8 +283,15 @@ CELERY_BEAT_SCHEDULE = {
             minute=55
         ),
     },
-}
 
+    "daily-low-stock-alerts": {
+        "task": "reports.tasks.send_all_low_stock_alerts",
+        "schedule": crontab(
+            hour=8,
+            minute=0
+        ),
+    },
+}
 
 
 # PRODUCTION SECURITY SETTINGS
@@ -304,6 +301,14 @@ def env_bool(name, default=False):
         name,
         str(default)
     ).lower() in ("1", "true", "yes", "on")
+
+
+# NGINX REVERSE PROXY
+
+SECURE_PROXY_SSL_HEADER = (
+    "HTTP_X_FORWARDED_PROTO",
+    "https"
+)
 
 
 # HTTPS faqat SSL sertifikati va reverse proxy tayyor bo'lganda yoqiladi.

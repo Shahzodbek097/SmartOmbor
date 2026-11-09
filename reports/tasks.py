@@ -122,11 +122,12 @@ def send_low_stock_alert(company_id):
     }
 
 
+
 @shared_task
 def generate_daily_sales_report(company_id):
     """
-    Kompaniyaning bugungi savdo hisobotini
-    fon rejimida hisoblaydi.
+    Kompaniyaning kunlik savdo hisobotini
+    hisoblaydi va Rahbarlarga email yuboradi.
     """
 
     try:
@@ -148,15 +149,63 @@ def generate_daily_sales_report(company_id):
         today
     )
 
+    # Faol Rahbarlarning email manzillarini olish
+    emails = list(
+        CompanyMembership.objects.filter(
+            company=company,
+            role="Rahbar",
+            faol=True,
+            company__faol=True,
+            user__is_active=True,
+        ).exclude(
+            user__email=""
+        ).values_list(
+            "user__email",
+            flat=True
+        ).distinct()
+    )
+
+    if not emails:
+        return {
+            "success": False,
+            "message": "Rahbarlarning email manzili topilmadi."
+        }
+
+    buyurtmalar = report["buyurtmalar_soni"]
+    savdo = report["savdo_summasi"]
+    mahsulotlar = report["sotilgan_mahsulotlar"]
+    foyda = report["foyda"]
+
+    message = (
+        f"Hurmatli {company.nomi} rahbari!\n\n"
+        f"{today.strftime('%d.%m.%Y')} kunlik savdo hisoboti.\n\n"
+        f"KOMPANIYA: {company.nomi}\n\n"
+        f"Buyurtmalar soni: {buyurtmalar}\n"
+        f"Jami savdo: {savdo} so'm\n"
+        f"Sotilgan mahsulotlar: {mahsulotlar} dona\n"
+        f"Yalpi foyda: {foyda} so'm\n\n"
+        "Hisobot SmartOmbor tizimi tomonidan "
+        "avtomatik shakllantirildi."
+    )
+
+    yuborildi = send_mail(
+        subject=f"{company.nomi} — Kunlik savdo hisoboti",
+        message=message,
+        from_email=None,
+        recipient_list=emails,
+        fail_silently=False,
+    )
+
     return {
-        "success": True,
+        "success": yuborildi == 1,
         "company": company.nomi,
         "sana": today.isoformat(),
-        "buyurtmalar_soni": report["buyurtmalar_soni"],
-        "savdo_summasi": str(report["savdo_summasi"]),
-        "sotilgan_mahsulotlar": report["sotilgan_mahsulotlar"],
-        "foyda": str(report["foyda"]),
+        "recipients": len(emails),
+        "buyurtmalar_soni": buyurtmalar,
+        "savdo_summasi": str(savdo),
+        "foyda": str(foyda),
     }
+
 
 
 @shared_task
@@ -176,6 +225,34 @@ def generate_all_daily_sales_reports():
         result = generate_daily_sales_report.delay(
             company_id
         )
+
+        task_ids.append({
+            "company_id": company_id,
+            "task_id": result.id
+        })
+
+    return {
+        "success": True,
+        "companies_count": len(task_ids),
+        "tasks": task_ids
+    }
+
+
+@shared_task
+def send_all_low_stock_alerts():
+    """
+    Barcha faol kompaniyalarning Rahbarlariga
+    kam qolgan mahsulotlar haqida xabar yuboradi.
+    """
+
+    company_ids = Company.objects.filter(
+        faol=True
+    ).values_list("id", flat=True)
+
+    task_ids = []
+
+    for company_id in company_ids:
+        result = send_low_stock_alert.delay(company_id)
 
         task_ids.append({
             "company_id": company_id,

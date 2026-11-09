@@ -87,6 +87,18 @@ def complete_order(order_id, user=None):
     order.status = Order.Status.COMPLETED
     order.save(update_fields=["total_price", "status"])
 
+    # Email vazifasini faqat tranzaksiya muvaffaqiyatli
+    # yakunlangandan keyin Celery navbatiga qo'shamiz.
+
+    from .tasks import send_order_completed_email
+
+    order_id = order.id
+
+    transaction.on_commit(
+        lambda: send_order_completed_email.delay(order_id),
+        robust=True
+    )
+
     return order
 
 
