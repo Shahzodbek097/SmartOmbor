@@ -8,9 +8,10 @@ services:
     ports: !reset []
 
     environment:
-      DJANGO_DEBUG: "0"
-      DJANGO_HTTPS_ENABLED: "0"
-      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1,web"
+      DJANGO_DEBUG: "${DJANGO_DEBUG:-0}"
+      DJANGO_HTTPS_ENABLED: "${DJANGO_HTTPS_ENABLED:-0}"
+      DJANGO_ALLOWED_HOSTS: "${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,web}"
+      DJANGO_CSRF_TRUSTED_ORIGINS: "${DJANGO_CSRF_TRUSTED_ORIGINS:-}"
 
     healthcheck:
       test:
@@ -29,10 +30,12 @@ services:
     image: ghcr.io/shahzodbek097/smartombor:latest
     build: !reset null
     pull_policy: always
+
     environment:
-      DJANGO_DEBUG: "0"
-      DJANGO_HTTPS_ENABLED: "0"
-      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1,web"
+      DJANGO_DEBUG: "${DJANGO_DEBUG:-0}"
+      DJANGO_HTTPS_ENABLED: "${DJANGO_HTTPS_ENABLED:-0}"
+      DJANGO_ALLOWED_HOSTS: "${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,web}"
+      DJANGO_CSRF_TRUSTED_ORIGINS: "${DJANGO_CSRF_TRUSTED_ORIGINS:-}"
 
 
   # Celery Beat
@@ -40,10 +43,12 @@ services:
     image: ghcr.io/shahzodbek097/smartombor:latest
     build: !reset null
     pull_policy: always
+
     environment:
-      DJANGO_DEBUG: "0"
-      DJANGO_HTTPS_ENABLED: "0"
-      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1,web"
+      DJANGO_DEBUG: "${DJANGO_DEBUG:-0}"
+      DJANGO_HTTPS_ENABLED: "${DJANGO_HTTPS_ENABLED:-0}"
+      DJANGO_ALLOWED_HOSTS: "${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,web}"
+      DJANGO_CSRF_TRUSTED_ORIGINS: "${DJANGO_CSRF_TRUSTED_ORIGINS:-}"
 
 
   # Nginx reverse proxy
