@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       confirm_deploy:
-        description: "Haqiqiy VPS serverga deploy qilishni tasdiqlaysizmi?"
+        description: "VPS serverga deploy qilishni tasdiqlaysizmi?"
         required: true
         type: boolean
         default: false
@@ -15,11 +15,8 @@ permissions:
 jobs:
   deploy:
     name: VPS ga joylashtirish
-
     if: ${{ inputs.confirm_deploy == true }}
-
     runs-on: ubuntu-latest
-
     environment: production
 
     steps:
@@ -31,40 +28,30 @@ jobs:
           VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
           VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
           VPS_APP_DIR: ${{ vars.VPS_APP_DIR }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
         run: |
           set -euo pipefail
 
-          test -n "$VPS_HOST" || {
-            echo "VPS_HOST sozlanmagan"
-            exit 1
-          }
+          for name in VPS_HOST VPS_USER VPS_SSH_PRIVATE_KEY VPS_KNOWN_HOSTS VPS_APP_DIR; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "$name sozlanmagan"
+              exit 1
+            fi
+          done
 
-          test -n "$VPS_USER" || {
-            echo "VPS_USER sozlanmagan"
-            exit 1
-          }
-
-          test -n "$VPS_SSH_PRIVATE_KEY" || {
-            echo "VPS_SSH_PRIVATE_KEY sozlanmagan"
-            exit 1
-          }
-
-          test -n "$VPS_KNOWN_HOSTS" || {
-            echo "VPS_KNOWN_HOSTS sozlanmagan"
-            exit 1
-          }
-
-          test -n "$VPS_APP_DIR" || {
-            echo "VPS_APP_DIR sozlanmagan"
-            exit 1
-          }
-
-          if [[ ! "$VPS_APP_DIR" =~ ^/[a-zA-Z0-9._/-]+$ ]]; then
-            echo "VPS_APP_DIR noto'g'ri formatda"
+          if [[ ! "$VPS_APP_DIR" =~ ^/[a-zA-Z0-9._/-]+$ ]] || [[ "$VPS_APP_DIR" == *".."* ]]; then
+            echo "VPS_APP_DIR noto'g'ri"
             exit 1
           fi
 
-          echo "Deployment sozlamalari mavjud."
+          if [[ -n "$GHCR_USERNAME" && -z "$GHCR_READ_TOKEN" ]] || \
+             [[ -z "$GHCR_USERNAME" && -n "$GHCR_READ_TOKEN" ]]; then
+            echo "GHCR_USERNAME va GHCR_READ_TOKEN birgalikda sozlanishi kerak."
+            exit 1
+          fi
+
+          echo "Deployment sozlamalari tekshirildi."
 
       - name: SSH kalitini tayyorlash
         shell: bash
@@ -85,81 +72,274 @@ jobs:
 
           ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null
 
-      - name: VPS ga deploy qilish
+      - name: VPS ga xavfsiz deploy qilish
         shell: bash
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_APP_DIR: ${{ vars.VPS_APP_DIR }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
         run: |
           set -euo pipefail
 
-          ssh \
-            -i ~/.ssh/deploy_key \
-            -o BatchMode=yes \
-            -o StrictHostKeyChecking=yes \
-            "$VPS_USER@$VPS_HOST" \
-            "bash -s -- '$VPS_APP_DIR'" <<'REMOTE'
+          {
+            printf 'export GHCR_USERNAME=%q\n' "$GHCR_USERNAME"
+            printf 'export GHCR_READ_TOKEN=%q\n' "$GHCR_READ_TOKEN"
 
+            cat <<'REMOTE'
           set -Eeuo pipefail
 
           APP_DIR="$1"
-
           cd "$APP_DIR"
 
-          if [ ! -f .env ]; then
-            echo "Production .env fayli topilmadi!"
-            exit 1
-          fi
+          COMPOSE=(
+            docker compose
+            -f compose.yaml
+            -f compose.prod.yaml
+          )
 
-          if [ ! -d .git ]; then
+          IMAGE="ghcr.io/shahzodbek097/smartombor:latest"
+          ROLLBACK_IMAGE="smartombor-local-rollback:previous"
+          ROLLBACK_OVERRIDE="$(mktemp /tmp/smartombor-rollback.XXXXXX.yaml)"
+          OLD_IMAGE_ID=""
+          GHCR_LOGIN_DONE=0
+
+          cleanup() {
+            rm -f "$ROLLBACK_OVERRIDE"
+
+            if [[ "$GHCR_LOGIN_DONE" == "1" ]]; then
+              docker logout ghcr.io >/dev/null 2>&1 || true
+            fi
+          }
+
+          trap cleanup EXIT
+
+          # Kerakli fayllar
+          for file in .env compose.yaml compose.prod.yaml scripts/backup_db.sh; do
+            if [[ ! -f "$file" ]]; then
+              echo "Kerakli fayl topilmadi: $file"
+              exit 1
+            fi
+          done
+
+          if [[ ! -d .git ]]; then
             echo "Git repository topilmadi!"
             exit 1
           fi
 
-          echo "GitHub kodlari yangilanmoqda..."
-          
-          echo "Deploydan oldin PostgreSQL backup olinmoqda..."
-
-          if [ -f scripts/backup_db.sh ]; then
-              bash scripts/backup_db.sh
-          else
-              echo "Backup skripti topilmadi!"
-              exit 1
-          fi
-          
-          echo "Backup muvaffaqiyatli yakunlandi."
-          
+          # Kodlarni yangilash
+          echo "GitHub kodlari olinmoqda..."
           git fetch --prune origin main
           git reset --hard origin/main
 
-          echo "Docker konfiguratsiyasi tekshirilmoqda..."
+          "${COMPOSE[@]}" config -q
 
-          docker compose \
-            -f compose.yaml \
-            -f compose.prod.yaml config -q
+          # Mavjud database bo'lsa backup olish
+          DB_VOLUME="$(
+            docker volume ls \
+              -q \
+              --filter label=com.docker.compose.volume=postgres_data |
+              sed -n '1p'
+          )"
 
+          if [[ -n "$DB_VOLUME" ]]; then
+            DB_CID="$("${COMPOSE[@]}" ps -q db)"
+            WEB_CID="$("${COMPOSE[@]}" ps -q web)"
+
+            if [[ -z "$DB_CID" || -z "$WEB_CID" ]]; then
+              echo "Mavjud DB yoki web ishlamayapti. Deploy to'xtatildi."
+              exit 1
+            fi
+
+            if [[ "$(docker inspect -f '{{.State.Status}}' "$DB_CID")" != "running" ]] || \
+               [[ "$(docker inspect -f '{{.State.Status}}' "$WEB_CID")" != "running" ]]; then
+              echo "Mavjud xizmatlar ishlamayapti. Backup olinmadi."
+              exit 1
+            fi
+
+            echo "PostgreSQL va media backup olinmoqda..."
+            bash scripts/backup_db.sh
+          else
+            echo "Birinchi deploy: oldingi database topilmadi. Backup o'tkazib yuborildi."
+          fi
+
+          # Oldingi image'ni saqlash
+          OLD_IMAGE_ID="$(
+            docker image inspect "$IMAGE" --format '{{.Id}}' 2>/dev/null || true
+          )"
+
+          if [[ -n "$OLD_IMAGE_ID" ]]; then
+            docker image tag "$OLD_IMAGE_ID" "$ROLLBACK_IMAGE"
+            echo "Oldingi image rollback uchun saqlandi."
+          fi
+
+          # Rollback uchun vaqtinchalik Compose
+          cat > "$ROLLBACK_OVERRIDE" <<'YAML'
+          services:
+            web:
+              image: smartombor-local-rollback:previous
+              pull_policy: never
+            celery_worker:
+              image: smartombor-local-rollback:previous
+              pull_policy: never
+            celery_beat:
+              image: smartombor-local-rollback:previous
+              pull_policy: never
+          YAML
+
+          ROLLBACK_COMPOSE=(
+            docker compose
+            -f compose.yaml
+            -f compose.prod.yaml
+            -f "$ROLLBACK_OVERRIDE"
+          )
+
+          wait_healthy() {
+            local service="$1"
+            local cid
+            local status
+
+            for attempt in $(seq 1 36); do
+              cid="$("${COMPOSE[@]}" ps -q "$service")"
+
+              if [[ -n "$cid" ]]; then
+                status="$(docker inspect \
+                  -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' \
+                  "$cid" 2>/dev/null || true)"
+
+                if [[ "$status" == "healthy" ]]; then
+                  echo "$service: healthy"
+                  return 0
+                fi
+
+                if [[ "$status" == "unhealthy" ]]; then
+                  break
+                fi
+              fi
+
+              sleep 5
+            done
+
+            "${COMPOSE[@]}" logs --tail=80 "$service" || true
+            return 1
+          }
+
+          wait_running() {
+            local service="$1"
+            local cid
+            local status
+
+            for attempt in $(seq 1 24); do
+              cid="$("${COMPOSE[@]}" ps -q "$service")"
+
+              if [[ -n "$cid" ]]; then
+                status="$(docker inspect -f '{{.State.Status}}' "$cid" 2>/dev/null || true)"
+
+                if [[ "$status" == "running" ]]; then
+                  echo "$service: running"
+                  return 0
+                fi
+              fi
+
+              sleep 5
+            done
+
+            "${COMPOSE[@]}" logs --tail=80 "$service" || true
+            return 1
+          }
+
+          rollback() {
+            echo "Yangi versiya ishlamadi. Rollback boshlanmoqda..."
+
+            if [[ -z "$OLD_IMAGE_ID" ]]; then
+              echo "Oldingi image topilmadi. Bu birinchi deploy bo'lishi mumkin."
+              echo "Backup fayllari saqlangan."
+              return 1
+            fi
+
+            docker image tag "$OLD_IMAGE_ID" "$ROLLBACK_IMAGE"
+
+            if ! "${ROLLBACK_COMPOSE[@]}" up \
+              -d --no-build --no-deps --force-recreate \
+              web celery_worker celery_beat; then
+              echo "Rollback konteynerlarini tiklashda xato!"
+              return 1
+            fi
+
+            if ! wait_healthy web; then
+              echo "Oldingi web image ham healthy bo'lmadi!"
+              return 1
+            fi
+
+            echo "Oldingi ilova image'i tiklandi."
+            echo "Database migratsiyalari avtomatik orqaga qaytarilmadi."
+            return 0
+          }
+
+          # GHCR autentifikatsiyasi
+          if [[ -n "${GHCR_USERNAME:-}" || -n "${GHCR_READ_TOKEN:-}" ]]; then
+            if [[ -z "${GHCR_USERNAME:-}" || -z "${GHCR_READ_TOKEN:-}" ]]; then
+              echo "GHCR credentials to'liq emas!"
+              exit 1
+            fi
+
+            printf '%s' "$GHCR_READ_TOKEN" |
+              docker login ghcr.io \
+                --username "$GHCR_USERNAME" \
+                --password-stdin
+
+            GHCR_LOGIN_DONE=1
+          else
+            echo "GHCR credentials berilmadi. Package public bo'lishi kerak."
+          fi
+
+          # Yangi image'lar
           echo "GHCR image yuklanmoqda..."
 
-          docker compose \
-            -f compose.yaml \
-            -f compose.prod.yaml \
-            pull web celery_worker celery_beat
+          if ! "${COMPOSE[@]}" pull web celery_worker celery_beat; then
+            echo "Image yuklanmadi. Hozirgi konteynerlarga tegilmadi."
+            exit 1
+          fi
 
-          echo "SmartOmbor ishga tushirilmoqda..."
+          # Ilovani yangilash
+          echo "SmartOmbor yangilanmoqda..."
 
-          docker compose \
-            -f compose.yaml \
-            -f compose.prod.yaml \
-            up -d --remove-orphans
+          if ! "${COMPOSE[@]}" up -d --no-build --remove-orphans; then
+            rollback || true
+            exit 1
+          fi
 
-          echo "Konteynerlar holati:"
+          # Healthcheck
+          if ! wait_healthy db ||
+             ! wait_healthy redis ||
+             ! wait_healthy web ||
+             ! wait_healthy nginx ||
+             ! wait_running celery_worker ||
+             ! wait_running celery_beat; then
 
-          docker compose \
-            -f compose.yaml \
-            -f compose.prod.yaml \
-            ps
+            echo "Healthcheck muvaffaqiyatsiz!"
+            rollback || true
+            exit 1
+          fi
 
-          echo "Deployment buyruqlari bajarildi."
+          # Celery Worker tekshiruvi
+          if ! "${COMPOSE[@]}" exec -T celery_worker \
+            celery -A config inspect ping --timeout=10; then
+
+            echo "Celery Worker javob bermadi!"
+            rollback || true
+            exit 1
+          fi
+
+          echo "Barcha xizmatlar muvaffaqiyatli ishga tushdi."
+          "${COMPOSE[@]}" ps
 
           REMOTE
+          } | ssh \
+            -i ~/.ssh/deploy_key \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            "$VPS_USER@$VPS_HOST" \
+            "bash -s -- '$VPS_APP_DIR'"
+

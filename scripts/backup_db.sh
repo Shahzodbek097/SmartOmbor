@@ -1,63 +1,85 @@
-
 #!/usr/bin/env bash
 
 set -Eeuo pipefail
+umask 077
 
-# Loyiha joylashgan asosiy papka
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 cd "$PROJECT_DIR"
 
-# Docker Compose buyruqlari
+BACKUP_DIR="${SMARTOMBAR_BACKUP_DIR:-/var/backups/smartombor}"
+
+mkdir -p "$BACKUP_DIR"
+chmod 700 "$BACKUP_DIR"
+
 COMPOSE=(
     docker compose
     -f compose.yaml
     -f compose.prod.yaml
 )
 
-# Backup papkasi
-BACKUP_DIR="$PROJECT_DIR/backups"
-mkdir -p "$BACKUP_DIR"
-
-# Backup fayli nomi
 TIMESTAMP="$(date -u +'%Y%m%d_%H%M%S_UTC')"
-BACKUP_FILE="$BACKUP_DIR/smartombor_$TIMESTAMP.dump"
-TEMP_FILE="$BACKUP_FILE.tmp"
+
+DB_BACKUP="$BACKUP_DIR/smartombor_$TIMESTAMP.dump"
+DB_TEMP="$DB_BACKUP.tmp"
+
+MEDIA_BACKUP="$BACKUP_DIR/smartombor_media_$TIMESTAMP.tar.gz"
+MEDIA_TEMP="$MEDIA_BACKUP.tmp"
 
 cleanup() {
-    rm -f "$TEMP_FILE"
+    rm -f "$DB_TEMP" "$MEDIA_TEMP"
 }
 
 trap cleanup EXIT
 
+# 1. PostgreSQL tekshirish
 echo "PostgreSQL tekshirilmoqda..."
 
 "${COMPOSE[@]}" exec -T db pg_isready
 
-echo "Backup yaratilmoqda..."
+# 2. Database backup
+echo "PostgreSQL backup olinmoqda..."
 
 "${COMPOSE[@]}" exec -T db sh -c \
     'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' \
-    > "$TEMP_FILE"
+    > "$DB_TEMP"
 
-# Backup bo'sh emasligini tekshirish
-if [[ ! -s "$TEMP_FILE" ]]; then
-    echo "XATO: Backup fayli bo'sh!"
+if [[ ! -s "$DB_TEMP" ]]; then
+    echo "XATO: Database backup bo'sh!"
     exit 1
 fi
 
-# Tayyor faylni saqlash
-mv "$TEMP_FILE" "$BACKUP_FILE"
+# 3. Media fayllar backup
+echo "Media fayllar backup olinmoqda..."
 
-echo "Backup muvaffaqiyatli yaratildi!"
-echo "Fayl: $BACKUP_FILE"
+"${COMPOSE[@]}" exec -T web python -c \
+    'import sys,tarfile; a=tarfile.open(fileobj=sys.stdout.buffer, mode="w|gz"); a.add("/app/media", arcname="media"); a.close()' \
+    > "$MEDIA_TEMP"
 
-# 7 kundan eski backup'larni o'chirish
+if [[ ! -s "$MEDIA_TEMP" ]]; then
+    echo "XATO: Media backup bo'sh!"
+    exit 1
+fi
+
+# 4. Media arxivini tekshirish
+gzip -t "$MEDIA_TEMP"
+
+# 5. Tayyor backup fayllarini saqlash
+mv "$DB_TEMP" "$DB_BACKUP"
+mv "$MEDIA_TEMP" "$MEDIA_BACKUP"
+
+chmod 600 "$DB_BACKUP" "$MEDIA_BACKUP"
+
+echo "Ikkala backup muvaffaqiyatli yaratildi!"
+echo "Database: $DB_BACKUP"
+echo "Media: $MEDIA_BACKUP"
+
+# 6. 7 kundan eski backup fayllarini tozalash
 find "$BACKUP_DIR" \
     -maxdepth 1 \
     -type f \
-    -name 'smartombor_*.dump' \
+    \( -name 'smartombor_*.dump' -o -name 'smartombor_media_*.tar.gz' \) \
     -mtime +7 \
     -print \
     -delete
