@@ -96,6 +96,9 @@ jobs:
       - name: Docker Compose konfiguratsiyasini tekshirish
         run: docker compose config -q
 
+      - name: Production Compose konfiguratsiyasini tekshirish
+        run: docker compose -f compose.yaml -f compose.prod.yaml config -q
+
       - name: Docker image'larini yig'ish
         run: docker compose build web celery_worker celery_beat
 
