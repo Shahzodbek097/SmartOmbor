@@ -1,0 +1,154 @@
+name: SmartOmbor CD - Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_deploy:
+        description: "Haqiqiy VPS serverga deploy qilishni tasdiqlaysizmi?"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: VPS ga joylashtirish
+
+    if: ${{ inputs.confirm_deploy == true }}
+
+    runs-on: ubuntu-latest
+
+    environment: production
+
+    steps:
+      - name: Deployment sozlamalarini tekshirish
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          VPS_APP_DIR: ${{ vars.VPS_APP_DIR }}
+        run: |
+          set -euo pipefail
+
+          test -n "$VPS_HOST" || {
+            echo "VPS_HOST sozlanmagan"
+            exit 1
+          }
+
+          test -n "$VPS_USER" || {
+            echo "VPS_USER sozlanmagan"
+            exit 1
+          }
+
+          test -n "$VPS_SSH_PRIVATE_KEY" || {
+            echo "VPS_SSH_PRIVATE_KEY sozlanmagan"
+            exit 1
+          }
+
+          test -n "$VPS_KNOWN_HOSTS" || {
+            echo "VPS_KNOWN_HOSTS sozlanmagan"
+            exit 1
+          }
+
+          test -n "$VPS_APP_DIR" || {
+            echo "VPS_APP_DIR sozlanmagan"
+            exit 1
+          }
+
+          if [[ ! "$VPS_APP_DIR" =~ ^/[a-zA-Z0-9._/-]+$ ]]; then
+            echo "VPS_APP_DIR noto'g'ri formatda"
+            exit 1
+          fi
+
+          echo "Deployment sozlamalari mavjud."
+
+      - name: SSH kalitini tayyorlash
+        shell: bash
+        env:
+          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "$VPS_SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+          ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null
+
+      - name: VPS ga deploy qilish
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_APP_DIR: ${{ vars.VPS_APP_DIR }}
+        run: |
+          set -euo pipefail
+
+          ssh \
+            -i ~/.ssh/deploy_key \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            "$VPS_USER@$VPS_HOST" \
+            "bash -s -- '$VPS_APP_DIR'" <<'REMOTE'
+
+          set -Eeuo pipefail
+
+          APP_DIR="$1"
+
+          cd "$APP_DIR"
+
+          if [ ! -f .env ]; then
+            echo "Production .env fayli topilmadi!"
+            exit 1
+          fi
+
+          if [ ! -d .git ]; then
+            echo "Git repository topilmadi!"
+            exit 1
+          fi
+
+          echo "GitHub kodlari yangilanmoqda..."
+
+          git fetch --prune origin main
+          git reset --hard origin/main
+
+          echo "Docker konfiguratsiyasi tekshirilmoqda..."
+
+          docker compose \
+            -f compose.yaml \
+            -f compose.prod.yaml config -q
+
+          echo "GHCR image yuklanmoqda..."
+
+          docker compose \
+            -f compose.yaml \
+            -f compose.prod.yaml \
+            pull web celery_worker celery_beat
+
+          echo "SmartOmbor ishga tushirilmoqda..."
+
+          docker compose \
+            -f compose.yaml \
+            -f compose.prod.yaml \
+            up -d --remove-orphans
+
+          echo "Konteynerlar holati:"
+
+          docker compose \
+            -f compose.yaml \
+            -f compose.prod.yaml \
+            ps
+
+          echo "Deployment buyruqlari bajarildi."
+
+          REMOTE
