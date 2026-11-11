@@ -152,6 +152,8 @@ activemq-data/
 
 # Environments
 .env
+.env.*
+!.env.example
 .envrc
 .venv
 env/
@@ -235,8 +237,6 @@ backups/
 *.dump
 *.backup
 
-# Environment secrets
-.env.*
-
-# Public template
-!.env.example
+# Secret files
+*.pem
+*.key

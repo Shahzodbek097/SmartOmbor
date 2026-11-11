@@ -1,22 +1,23 @@
 FROM python:3.11-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
+# Pip yangilash
+RUN python -m pip install --no-cache-dir --upgrade pip
 
+# Kutubxonalarni o'rnatish
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN python -m pip install --no-cache-dir -r requirements.txt
 
+# Root bo'lmagan foydalanuvchi yaratish
 RUN addgroup --system app \
-    && adduser --system --ingroup app app
-
-RUN mkdir -p /app/staticfiles /app/media /app/celerybeat-data \
+    && adduser --system --ingroup app app \
+    && mkdir -p /app/staticfiles /app/media /app/celerybeat-data \
     && chown -R app:app /app
 
 COPY --chown=app:app . .
