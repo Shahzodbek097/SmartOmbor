@@ -10,6 +10,7 @@ from django.db import transaction
 from django.contrib.auth import login
 
 from .decorators import role_required
+from .role_permissions import assign_user_role, remove_smartombor_roles
 from .forms import UserCreateForm, UserUpdateForm, ProfileUpdateForm, RegisterForm
 from companies.utils import get_user_company
 from companies.models import Company
@@ -85,6 +86,7 @@ def user_create(request):
                 role=role.name,
                 faol=True
             )
+            assign_user_role(user, role.name)
 
         messages.success(
             request,
@@ -145,6 +147,7 @@ def user_update(request, user_id):
 
             membership.role = role.name
             membership.save(update_fields=["role"])
+            assign_user_role(user, role.name)
 
         messages.success(
             request,
@@ -195,6 +198,11 @@ def user_toggle_status(request, user_id):
 
     membership.faol = not membership.faol
     membership.save(update_fields=["faol"])
+
+    if membership.faol:
+        assign_user_role(user, membership.role)
+    else:
+        remove_smartombor_roles(user)
 
     messages.success(
         request,
@@ -282,11 +290,8 @@ def register(request):
                 faol=True
             )
 
-            # Eski Group tizimi bilan moslik
-            rahbar_group, _ = Group.objects.get_or_create(
-                name="Rahbar"
-            )
-            user.groups.add(rahbar_group)
+            # Rahbar guruhi va uning ruxsatlarini avtomatik biriktirish
+            assign_user_role(user, CompanyMembership.Role.RAHBAR)
 
         # Ro'yxatdan o'tgandan so'ng avtomatik kirish
         login(request, user)
