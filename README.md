@@ -79,6 +79,18 @@ Keyinchalik Rahbar o‘z kompaniyasiga xodimlarni qo‘shadi va ularga Omborchi 
 
 Ruxsatlar faqat menyuni yashirish bilan cheklanmaydi: Django view dekoratorlari va API permission class'lari server tomonida ham tekshiradi. Foydalanuvchi faqat faol kompaniya a’zoligi va o‘z roliga ruxsat etilgan amallarni bajarishi kerak.
 
+Django Group ruxsatlari ham avtomatik boshqariladi. `accounts` ilovasidagi `post_migrate` signali `migrate` bajarilgandan keyin uchta rol guruhini yaratadi va kerakli model ruxsatlarini biriktiradi. Mavjud faol kompaniya a’zolarining guruhlari ham `CompanyMembership.role` qiymatiga moslanadi. Rahbar xodim qo‘shganda yoki rolini o‘zgartirganda guruh ruxsatlari avtomatik sinxronlanadi.
+
+| Rol | Avtomatik ruxsatlar va menyular |
+|---|---|
+| **Rahbar** | Mahsulot va kategoriyalarni ko‘rish, qo‘shish va tahrirlash; xodimlarni boshqarish; kompaniya buyurtmalari va hisobotlarini ko‘rish. |
+| **Omborchi** | Mahsulot va kategoriyalarni ko‘rish, qo‘shish va tahrirlash; ombor kirim-chiqimini yuritish. |
+| **Sotuvchi** | Buyurtma yaratish va faqat o‘z buyurtmalarini ko‘rish, yakunlash yoki bekor qilish. |
+
+Bosh menyu uchala rol uchun mavjud. Sotuvchiga `sales.view_order` ruxsati berilgan bo‘lsa ham, barcha buyurtmalar sahifasi alohida `Rahbar` roli bilan himoyalangan. Shu tariqa Sotuvchi boshqa xodimlarning buyurtmalarini ko‘ra olmaydi.
+
+Yangi lokal yoki production bazasida odatdagi `python manage.py migrate` buyrug‘i rol guruhlari va ruxsatlarini ham sozlaydi.
+
 ## Ma’lumotlar modeli va biznes mantiqi
 
 ### Kompaniya va a’zolik
