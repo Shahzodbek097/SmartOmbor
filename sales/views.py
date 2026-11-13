@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError, PermissionDenied
 from django.db import transaction
 from django.core.paginator import Paginator
 
-from accounts.decorators import role_required, permission_required
+from accounts.decorators import role_required
 from .models import Order, OrderItem
 from .forms import OrderItemFormSet
 from .services import complete_order, cancel_order
@@ -306,7 +306,7 @@ def order_delete(request, order_id):
     return redirect("sales:order_list")
 
 
-@permission_required("sales.view_order")
+@role_required("Rahbar")
 def manager_order_list(request):
     company = get_user_company(request.user)
 
