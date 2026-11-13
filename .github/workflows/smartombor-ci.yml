@@ -79,7 +79,7 @@ jobs:
         run: python manage.py makemigrations --check --dry-run
 
       - name: API testlarini bajarish
-        run: python manage.py test api -v 2
+        run: python manage.py test accounts api -v 2
 
       - name: CI uchun vaqtinchalik env yaratish
         run: |
