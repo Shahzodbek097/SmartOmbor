@@ -11,30 +11,10 @@ from .views import (
 
 router = DefaultRouter()
 
-router.register(
-    "categories",
-    CategoryViewSet,
-    basename="category"
-)
-
-router.register(
-    "products",
-    ProductViewSet,
-    basename="product"
-)
-
-router.register(
-    "movements",
-    OmborMovementViewSet,
-    basename="movement"
-)
-
-router.register(
-    "orders",
-    OrderViewSet,
-    basename="order"
-)
-
+router.register("categories",CategoryViewSet,basename="category")
+router.register("products",ProductViewSet,basename="product")
+router.register("movements",OmborMovementViewSet,basename="movement")
+router.register("orders",OrderViewSet,basename="order")
 
 urlpatterns = [
     path("", include(router.urls)),

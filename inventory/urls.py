@@ -1,9 +1,9 @@
 from django.urls import path
-from . import views
+from views import *
 
 app_name = "inventory"
 
 urlpatterns = [
-    path("",views.movement_list,name="movement_list"),
-    path("create/",views.movement_create,name="movement_create"),
+    path("",movement_list,name="movement_list"),
+    path("create/",movement_create,name="movement_create"),
 ]

@@ -1,45 +1,15 @@
 from django.urls import path
-from . import views
+from views import *
 
 app_name = "sales"
 
 
 urlpatterns = [
-    path(
-        "",
-        views.order_list,
-        name="order_list",
-    ),
-
-    path(
-        "create/",
-        views.order_create,
-        name="order_create",
-    ),
-
-    path(
-        "<int:order_id>/",
-        views.order_detail,
-        name="order_detail",
-    ),
-
-    path(
-        "<int:order_id>/finish/",
-        views.order_finish,
-        name="order_finish",
-    ),
-
-    path(
-        "<int:order_id>/cancel/",
-        views.order_cancel,
-        name="order_cancel",
-    ),
-
-    path(
-        "<int:order_id>/delete/",
-        views.order_delete,
-        name="order_delete",
-    ),
-
-    path("manager/", views.manager_order_list, name="manager_order_list"),
+    path("",order_list,name="order_list"),
+    path("create/",order_create,name="order_create"),
+    path("<int:order_id>/",order_detail,name="order_detail"),
+    path("<int:order_id>/finish/",order_finish,name="order_finish"),
+    path("<int:order_id>/cancel/",order_cancel,name="order_cancel"),
+    path("<int:order_id>/delete/",order_delete,name="order_delete"),
+    path("manager/", manager_order_list, name="manager_order_list"),
 ]

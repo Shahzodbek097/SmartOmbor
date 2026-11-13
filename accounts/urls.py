@@ -1,70 +1,48 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
 
-from . import views
+from views import *
 
 app_name = "accounts"
 
 urlpatterns = [
     path("login/", auth_views.LoginView.as_view(), name="login"),
-    path("register/", views.register, name="register"),
+    path("register/", register, name="register"),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
 
-    path("users/", views.user_list, name="user_list"),
-    path("users/create/", views.user_create, name="user_create"),
-    path("profile/", views.profile, name="profile"),
-    path("profile/edit/", views.profile_update, name="profile_update"),
-    path("users/<int:user_id>/edit/", views.user_update, name="user_update"),
-    path(
-        "users/<int:user_id>/toggle-status/",
-        views.user_toggle_status,
-        name="user_toggle_status",
-    ),
-
-    path(
-        "password_change/",
-        auth_views.PasswordChangeView.as_view(
-            template_name="registration/password_change_form.html",
+    path("users/", user_list, name="user_list"),
+    path("users/create/", user_create, name="user_create"),
+    path("profile/", profile, name="profile"),
+    path("profile/edit/", profile_update, name="profile_update"),
+    path("users/<int:user_id>/edit/", user_update, name="user_update"),
+    path("users/<int:user_id>/toggle-status/",user_toggle_status,name="user_toggle_status"),
+    path("password_change/",auth_views.PasswordChangeView.as_view(template_name="registration/password_change_form.html",
             success_url="/accounts/password_change/done/",
         ),
         name="password_change",
     ),
-    path(
-        "password_change/done/",
-        auth_views.PasswordChangeDoneView.as_view(
-            template_name="registration/password_change_done.html",
-        ),
+
+    path("password_change/done/",auth_views.PasswordChangeDoneView.as_view(template_name="registration/password_change_done.html"),
         name="password_change_done",
     ),
 
-    path(
-        "password_reset/",
-        auth_views.PasswordResetView.as_view(
-            template_name="registration/password_reset_form.html",
+    path("password_reset/",auth_views.PasswordResetView.as_view(template_name="registration/password_reset_form.html",
             success_url="/accounts/password_reset/done/",
         ),
         name="password_reset",
     ),
-    path(
-        "password_reset/done/",
-        auth_views.PasswordResetDoneView.as_view(
-            template_name="registration/password_reset_done.html",
-        ),
+
+    path("password_reset/done/",auth_views.PasswordResetDoneView.as_view(template_name="registration/password_reset_done.html"),
         name="password_reset_done",
     ),
-    path(
-        "reset/<uidb64>/<token>/",
-        auth_views.PasswordResetConfirmView.as_view(
-            template_name="registration/password_reset_confirm.html",
+
+    path("reset/<uidb64>/<token>/",auth_views.PasswordResetConfirmView.as_view(template_name="registration/password_reset_confirm.html",
             success_url="/accounts/reset/done/",
         ),
         name="password_reset_confirm",
     ),
-    path(
-        "reset/done/",
-        auth_views.PasswordResetCompleteView.as_view(
-            template_name="registration/password_reset_complete.html",
-        ),
+
+    path("reset/done/",auth_views.PasswordResetCompleteView.as_view(template_name="registration/password_reset_complete.html"),
         name="password_reset_complete",
     ),
 ]
