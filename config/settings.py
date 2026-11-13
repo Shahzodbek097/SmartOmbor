@@ -68,7 +68,7 @@ INSTALLED_APPS = [
     'products',
     'sales',
     'inventory',
-    'accounts',
+    'accounts.apps.AccountsConfig',
     'reports',
     'companies',
     'api',
