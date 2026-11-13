@@ -120,6 +120,13 @@ def assign_user_role(user, role):
 
     user.groups.remove(*old_role_groups)
     user.groups.add(group)
+
+    # Django foydalanuvchi obyektida ruxsatlarni cache qiladi.
+    # Rol o'zgargach shu obyekt qayta ishlatilsa, eski cache qolmasin.
+    for cache_name in ("_perm_cache", "_user_perm_cache", "_group_perm_cache"):
+        if hasattr(user, cache_name):
+            delattr(user, cache_name)
+
     return group
 
 
