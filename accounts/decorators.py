@@ -43,7 +43,13 @@ def permission_required(permission):
             if request.user.is_superuser:
                 return view_func(request, *args, **kwargs)
 
-            if request.user.has_perm(permission):
+            faol_azolik = CompanyMembership.objects.filter(
+                user=request.user,
+                faol=True,
+                company__faol=True,
+            ).exists()
+
+            if faol_azolik and request.user.has_perm(permission):
                 return view_func(request, *args, **kwargs)
 
             raise PermissionDenied
