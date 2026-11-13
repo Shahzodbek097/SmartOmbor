@@ -281,13 +281,20 @@
 
             <div class="sidebar-section">ASOSIY MENU</div>
 
-            <!-- RAHBAR VA SUPERUSER -->
+            <!-- BOSH MENU: uchala rol uchun -->
+            <a href="{% url 'reports:dashboard' %}"
+               class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <i class="bi bi-grid-1x2"></i>
+                Bosh menu
+            </a>
+
+            <!-- RAHBAR UCHUN HISOBOTLAR VA XODIMLAR -->
             {% if user.is_superuser or perms.sales.view_order and not perms.sales.add_order %}
 
-                <a href="{% url 'reports:dashboard' %}"
-                   class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                    <i class="bi bi-grid-1x2"></i>
-                    Bosh menu
+                <a href="{% url 'accounts:user_list' %}"
+                   class="sidebar-link {% if request.resolver_match.url_name == 'user_list' or request.resolver_match.url_name == 'user_create' or request.resolver_match.url_name == 'user_update' %}active{% endif %}">
+                    <i class="bi bi-person-gear"></i>
+                    Xodimlar
                 </a>
 
                 <a href="{% url 'reports:sellers_report' %}"
